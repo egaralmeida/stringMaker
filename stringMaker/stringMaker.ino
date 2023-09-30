@@ -47,22 +47,9 @@ Keypad keypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 
 bool configState = true;
 
-// Button States
-#define STATE0 0
-#define STATE1 1
-#define STATE2 2
-
 char buttonStates[3] = {'s', 'z', ' '};
 
-// Rotation buttons
-struct sButtonRotation
-{
-  char buttonKey;
-  byte buttonState;
-};
-sButtonRotation buttonRotation[BTNS_ROT];
-
-// Speed buttons
+// Buttons
 struct sButton
 {
   char buttonKey;
@@ -145,17 +132,7 @@ void checkJoystick()
 void updateDisplay()
 {
   // TODO
-  /*
-    -->> LCD 20x04 <<--
 
-    01234567890123456789
-    --------------------
-    ]-  s 150  XXXs XXXz
-    ()  z 150  XXXs XXXz
-    -[    150  XXXs XXXz
-    <>  <  40  XXX> XXX<
-    --------------------
-  */
   String displayRow[4] = {"]- ", "() ", "]- ", "<> "};
 
   // 3 first rows are the same
@@ -259,7 +236,7 @@ void buttonHeld(char key)
   // Act on rotation and speed buttons
   for (int i = 0; i < BTNS_ROT; i++)
   {
-    if (key == buttonRotation[i].buttonKey)
+    if (key == button[i].buttonKey)
     {
       rowReset(i);
       break;
@@ -292,17 +269,17 @@ void buttonHeld(char key)
 
 void cycleButton(byte i)
 {
-  if (button[i].buttonState == buttonStates[STATE2])
+  if (button[i].buttonState == buttonStates[BTN_STATES - 1])
   {
-    button[i].buttonState = buttonStates[STATE0];
+    button[i].buttonState = buttonStates[0];
   }
-  else if (button[i].buttonState == buttonStates[STATE0])
+  else if (button[i].buttonState == buttonStates[0])
   {
-    button[i].buttonState = buttonStates[STATE1];
+    button[i].buttonState = buttonStates[1];
   }
-  else if (button[i].buttonState == buttonStates[STATE1])
+  else if (button[i].buttonState == buttonStates[1])
   {
-    button[i].buttonState = buttonStates[STATE2];
+    button[i].buttonState = buttonStates[BTN_STATES - 1];
   }
 }
 
