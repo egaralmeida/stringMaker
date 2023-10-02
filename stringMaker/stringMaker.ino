@@ -75,7 +75,10 @@ void setup()
   // Config keyboard
   keypad.addEventListener(keypadEvent);
 
+  // Config PINS
+
   // Config display
+  // TODO
 
   // Config button actions
   button[0].buttonKeyUP = '1';
@@ -133,6 +136,7 @@ void updateDisplay()
 {
   // TODO
 
+  // Row icons
   String displayRow[4] = {"]- ", "() ", "]- ", "<> "};
 
   // 3 first rows are the same
