@@ -3,17 +3,11 @@
    @author Egar Almeida
 */
 #include <Keypad.h>
-#define DEBUG
+#include <LiquidCrystal_PCF8574.h>
+#include "config.h"
+#include "utils.h"
+#include "stepperController.h"
 
-#ifdef DEBUG
-#define debugln(x) Serial.println(F(x))
-#define debug(x) Serial.print(F(x))
-
-#else
-#define debugln(x)
-#define debug(x)
-
-#endif
 /**
     Keyboard Setup
 */
@@ -29,8 +23,8 @@ char hexaKeys[ROWS][COLS] = {
     {'C', 'D', 'E', 'F'}};
 
 // Pinout
-byte rowPins[ROWS] = {3, 2, 1, 0}; // row pins
-byte colPins[COLS] = {7, 6, 5, 4}; // column pins
+byte rowPins[ROWS] = {KEYB_PIN_ROW_A, KEYB_PIN_ROW_B, KEYB_PIN_ROW_C, KEYB_PIN_ROW_D}; // row pins
+byte colPins[COLS] = {KEYB_PIN_COL_1, KEYB_PIN_COL_2, KEYB_PIN_COL_3, KEYB_PIN_COL_4}; // column pins
 
 // Create keypad object with our configuration
 Keypad keypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
@@ -38,8 +32,9 @@ Keypad keypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 /**
    Display Setup
 */
+LiquidCrystal_PCF8574 lcd(0x27);
 
-// Program configuration variables
+// Configuration variables
 
 #define BTN_STATES 3
 #define BTNS_ROT 4
@@ -47,9 +42,15 @@ Keypad keypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 
 bool configState = true;
 
-char buttonStates[3] = {'s', 'z', ' '};
+// Motors
+StepperController motorA = StepperController(MOTOR_PIN_A_STEP, MOTOR_PIN_A_DIR, MOTOR_PIN_A_ENABLED, 16, 200);
+StepperController motorB = StepperController(MOTOR_PIN_B_STEP, MOTOR_PIN_B_DIR, MOTOR_PIN_B_ENABLED, 16, 200);
+StepperController motorC = StepperController(MOTOR_PIN_C_STEP, MOTOR_PIN_C_DIR, MOTOR_PIN_C_ENABLED, 16, 200);
+StepperController motorD = StepperController(MOTOR_PIN_D_STEP, MOTOR_PIN_D_DIR, MOTOR_PIN_D_ENABLED, 16, 200);
 
 // Buttons
+char buttonStates[3] = {'s', 'z', ' '};
+
 struct sButton
 {
   char buttonKey;
@@ -76,9 +77,10 @@ void setup()
   keypad.addEventListener(keypadEvent);
 
   // Config PINS
+  // TODO
 
   // Config display
-  // TODO
+  displaySetup();
 
   // Config button actions
   button[0].buttonKeyUP = '1';
@@ -129,12 +131,15 @@ void state_running()
 // Handle the joystick input
 void checkJoystick()
 {
-  // TODO
+  // TODO:  set the correct motors and max rpm
+  motorA.stepFromAxis(analogRead(JOY_PIN_X), 0, 80);
+  motorB.stepFromAxis(analogRead(JOY_PIN_Y), 0, 80);
 }
 
 void updateDisplay()
 {
-  // TODO
+  // CLS
+  lcd.clear();
 
   // Row icons
   String displayRow[4] = {"]- ", "() ", "]- ", "<> "};
@@ -142,10 +147,13 @@ void updateDisplay()
   // 3 first rows are the same
   for (int i = 0; i < BTNS_ROT - 1; i++)
   {
-    displayRow[i] += button[i].buttonState + " " + String(button[i].turnsS) + "s " + String(button[i].turnsZ) + "z";
-#ifdef DEBUG
-    Serial.println(displayRow[i]);
-#endif
+    displayRow[i] += button[i].buttonState + " " + rightJustify(button[i].turnsS) + "s " + rightJustify(button[i].turnsZ) + "z";
+    debugVarln(displayRow[i]);
+
+    // Place the cursor at the start of each row
+    lcd.setCursor(0, i);
+    // Print the row
+    lcd.print(displayRow[i]);
   }
 
   // Last row varies
@@ -162,11 +170,15 @@ void updateDisplay()
   {
     arrowDir = ' ';
   }
-  displayRow[3] += arrowDir + " " + String(button[3].turnsS) + "s " + String(button[3].turnsZ) + "z";
-#ifdef DEBUG
-  Serial.println(displayRow[3]);
-  Serial.println("---------------------------------------------");
-#endif
+  displayRow[3] += arrowDir + " " + rightJustify(button[3].turnsS) + "s " + rightJustify(button[3].turnsZ) + "z";
+
+  debugVarln(displayRow[3]);
+  debugln(" ");
+
+  // Place the cursor at the start of row 4
+  lcd.setCursor(0, 3);
+  // Print the row
+  lcd.print(displayRow[3]);
 }
 
 // Key event raised
@@ -175,13 +187,6 @@ void keypadEvent(KeypadEvent key)
 
   char currKey = key;
   KeyState action = keypad.getState();
-
-  actOnKeyEvent(key, action);
-}
-
-// Handle key events according to machine state
-void actOnKeyEvent(char key, KeyState action)
-{
 
   switch (action)
   {
@@ -201,73 +206,84 @@ void actOnKeyEvent(char key, KeyState action)
 
 void buttonPressed(char key, bool released)
 {
-
-  // Act on rotation and speed
-  for (int i = 0; i < BTNS_ROT; i++)
+  // Don't check keys unnecessarily
+  if (key != specialButtonKeys[0] && key != specialButtonKeys[1])
   {
-    if (key == button[i].buttonKey)
+    // Act on rotation and speed
+    for (int i = 0; i < BTNS_ROT; i++)
     {
-      cycleButton(i);
-      break;
-    }
-    else if (key == button[i].buttonKeyUP)
-    {
-      button[i].currentRPM += 10;
-      break;
-    }
-    else if (key == button[i].buttonKeyDOWN)
-    {
-      button[i].currentRPM -= 10;
-      break;
+      if (key == button[i].buttonKey)
+      {
+        cycleButton(i);
+        break;
+      }
+      else if (key == button[i].buttonKeyUP)
+      {
+        button[i].currentRPM += button[i].currentRPM >= 999 ? 0 : 10; // Limited to 999 RPM for display safety (3 digits)
+        break;
+      }
+      else if (key == button[i].buttonKeyDOWN)
+      {
+        button[i].currentRPM -= button[i].currentRPM <= 0 ? 0 : 10; // no negative RPM please
+        break;
+      }
     }
   }
-
-  // Special Buttons
-  // Lathe mode
-  if (key == specialButtonKeys[0])
+  else
   {
-    // TODO
-  }
-  // Start / Pause
-  else if (key == specialButtonKeys[1])
-  {
-    configState = configState ? false : true;
+    // Special Buttons
+    // Lathe mode
+    if (key == specialButtonKeys[0])
+    {
+      // TODO
+    }
+    // Start / Pause
+    else if (key == specialButtonKeys[1])
+    {
+      configState = configState ? false : true;
+    }
   }
 }
 
 void buttonHeld(char key)
 {
-  // Act on rotation and speed buttons
-  for (int i = 0; i < BTNS_ROT; i++)
+  // Don't check keys unnecessarily
+  if (key != specialButtonKeys[0] && key != specialButtonKeys[1])
   {
-    if (key == button[i].buttonKey)
+    // Act on rotation and speed buttons
+    for (int i = 0; i < BTNS_ROT; i++)
     {
-      rowReset(i);
-      break;
-    }
+      if (key == button[i].buttonKey)
+      {
+        rowReset(i);
+        break;
+      }
 
-    if (key == button[i].buttonKeyUP)
-    {
-      button[i].currentRPM += 1;
-      break;
-    }
-    else if (key == button[i].buttonKeyDOWN)
-    {
-      button[i].currentRPM -= 1;
-      break;
+      if (key == button[i].buttonKeyUP)
+      {
+        button[i].currentRPM += button[i].currentRPM >= 999 ? 0 : 1; // Limited to 999 RPM for display safety (3 digits)
+        break;
+      }
+      else if (key == button[i].buttonKeyDOWN)
+      {
+        button[i].currentRPM -= button[i].currentRPM <= 0 ? 0 : 1; // no negative RPM please
+        break;
+      }
     }
   }
-
-  // Special Buttons
-  // Copy values
-  if (key == specialButtonKeys[0])
+  else
   {
-    // TODO
-  }
-  // General Reset
-  else if (key == specialButtonKeys[1])
-  {
-    // TODO
+    // Special Buttons
+    // Copy values
+    if (key == specialButtonKeys[0])
+    {
+      // TODO
+    }
+    // General Reset
+    else if (key == specialButtonKeys[1])
+    {
+      // TODO
+    }
   }
 }
 
@@ -290,4 +306,28 @@ void cycleButton(byte i)
 void rowReset(byte row)
 {
   // TODO
+}
+
+void displaySetup()
+{
+  int error;
+  Wire.begin();
+  Wire.beginTransmission(0x27);
+  error = Wire.endTransmission();
+
+  if (error == 0)
+  {
+    Serial.println("LCD found.");
+    lcd.begin(20, 4);
+
+    // Create custom chars
+    // lcd.createChar(1, dotOff);
+    // lcd.createChar(2, dotOn);
+  }
+  else
+  {
+    Serial.println("LCD not found.");
+    Serial.print("Error: ");
+    Serial.print(error);
+  }
 }
