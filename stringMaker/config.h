@@ -18,6 +18,23 @@
 
 
 
+#define DEBUG
+
+#ifdef DEBUG
+#define debugln(x) Serial.println(F(x))
+#define debug(x) Serial.print(F(x))
+#define debugVarln(x) Serial.println(x)
+#define debugVar(x) Serial.print(x)
+
+#else
+#define debugln(x)
+#define debug(x)
+#define debugVarln(x)
+#define debugVar(x)
+#endif
+
+
+
 // Pin definitions
 // Keyboard
 #define KEYB_PIN_ROW_A A3
