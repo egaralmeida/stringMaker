@@ -1,0 +1,140 @@
+-->> LCD 20x04 <<--
+
+01234567890123456789
+--------------------
+]-  s 150  XXXs XXXz
+()  z 150  XXXs XXXz
+-[    150  XXXs XXXz
+<>  <  40  XXX> XXX<        (ver de usar las flechas)
+--------------------
+
+mostrar los numeros de rpm y cuentavueltas sin ceros a la izquierda, alineado a la derecha con su simbolo de dirección
+
+-->> BOTONERA 4x4 (.corto / -largo) <<--
+
+		(1)				(2)		(3)		(4)
+(A) ]-  .S/Z/X					.RPM+10		.RPM-10		.TORNO (Copia el valor de RPM de (A) a (C) e invierte el sentido de giro entre ambos)     
+        -Reset RPM S/Z/X	        	-RPM+1		-RPM+1		-COPIA VALORES ENTRE MOTORES (Cada n seg. cambia de pareja de motores (A)-(B) / (B)-(C) / (A)-(C). Titila el dibujo para indicar esta acción
+								 					Al soltar, el segundo motor toma los valores del primero.
+(B) ()  .S/Z/X					.RPM+10		.RPM-10		.??
+        -Reset RPM S/Z/X	        	-RPM+1		-RPM+1
+
+(C) -[  .S/Z/X					.RPM+10		.RPM-10		.?? 
+        -Reset RPM S/Z/X	        	-RPM+1		-RPM+1
+
+(D) <>  .</>/X					.RPM+10		.RPM-10		.START/PAUSA
+        -Reset RPM </>/X	        	-RPM+1		-RPM+1		- reset general (por ahora, todo, rpms, rotaciones, etc)
+
+* sobre resets, se resetea SOLO lo que está seleccionado. Ejemplo, si el display muestra Z se resetea el contador rpm de Z y no ambos.
+	 En el caso de que X esté seleccionado, se resetean ambos.
+
+S = Rotación izquierda (antihoraria)
+Z = Rotación derecha (horaria)
+X = Sin rotación (no aparece en display)
+-----------------------------------------------------------------------------------------
+	
+
+	customChars[0] = Array(7,12,25,27,25,12,7,0);			
+	customChars[1] = Array(24,4,18,26,18,4,24,0); 			
+	customChars[2] = Array(31,16,16,16,16,16,31,0);			
+	customChars[3] = Array(24,24,24,31,24,24,24,0);  			
+	customChars[4] = Array(3,3,3,31,3,3,3,0); 
+	customChars[5] = Array(31,1,1,1,1,1,31,0);
+	customChars[6] = Array(24,12,6,3,6,12,24,0);
+	customChars[7] = Array(3,6,12,24,12,6,3,0);
+
+
+/** dibujan "]-"
+byte customChar[0] = {
+  B11111,
+  B10000,
+  B10000,
+  B10000,
+  B10000,
+  B10000,
+  B11111,
+  B00000
+};
+
+byte customChar[1] = {
+  B11000,
+  B11000,
+  B11000,
+  B11111,
+  B11000,
+  B11000,
+  B11000,
+  B00000
+};
+
+**/
+
+byte customChar[2] = {
+  B00111,
+  B01100,
+  B11001,
+  B11011,
+  B11001,
+  B01100,
+  B00111,
+  B00000
+};
+
+byte customChar[3] = {
+  B11000,
+  B00100,
+  B10010,
+  B11010,
+  B10010,
+  B00100,
+  B11000,
+  B00000
+};
+
+byte customChar[4] = {
+  B00011,
+  B00011,
+  B00011,
+  B11111,
+  B00011,
+  B00011,
+  B00011,
+  B00011
+};
+
+byte customChar[5] = {
+  B11111,
+  B00001,
+  B00001,
+  B00001,
+  B00001,
+  B00001,
+  B11111,
+  B00000
+};
+
+
+
+// CHEKEAR https://mil.ufl.edu/3744/docs/lcdmanual/characterset.html para ver de reemplazar estos:
+
+byte customChar[6] = {
+  B00011,
+  B00110,
+  B01100,
+  B11000,
+  B01100,
+  B00110,
+  B00011,
+  B00000
+};
+
+byte customChar[7] = {
+  B11000,
+  B01100,
+  B00110,
+  B00011,
+  B00110,
+  B01100,
+  B11000,
+  B00000
+};
