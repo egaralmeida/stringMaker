@@ -32,7 +32,7 @@ Keypad keypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 /**
    Display Setup
 */
-LiquidCrystal_PCF8574 lcd(0x27);
+LiquidCrystal_PCF8574 lcd(0x27); //lcd(0x27);
 
 // Configuration variables
 
@@ -330,4 +330,7 @@ void displaySetup()
     Serial.print("Error: ");
     Serial.print(error);
   }
+
+  lcd.setBacklight(255);
+
 }
