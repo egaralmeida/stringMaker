@@ -8,29 +8,31 @@
 <>  <  40  XXX> XXX<        (ver de usar las flechas)
 --------------------
 
-mostrar los numeros de rpm y cuentavueltas sin ceros a la izquierda, alineado a la derecha con su simbolo de dirección
+mostrar los numeros de rpm y cuentavueltas sin ceros a la izquierda, alineado a la derecha con su simbolo de direcciï¿½n
 
 -->> BOTONERA 4x4 (.corto / -largo) <<--
 
-		(1)				(2)		(3)		(4)
-(A) ]-  .S/Z/X					.RPM+10		.RPM-10		.TORNO (Copia el valor de RPM de (A) a (C) e invierte el sentido de giro entre ambos)     
-        -Reset RPM S/Z/X	        	-RPM+1		-RPM+1		-COPIA VALORES ENTRE MOTORES (Cada n seg. cambia de pareja de motores (A)-(B) / (B)-(C) / (A)-(C). Titila el dibujo para indicar esta acción
-								 					Al soltar, el segundo motor toma los valores del primero.
-(B) ()  .S/Z/X					.RPM+10		.RPM-10		.??
-        -Reset RPM S/Z/X	        	-RPM+1		-RPM+1
+		    (1)				          (2)		        (3)         (4)
+(A) ]-  .S/Z/X					    .RPM+10		    .RPM-10		  .TORNO (Copia el valor de RPM de (A) a (C) e invierte el sentido de giro entre ambos)
+        -Reset RPM S/Z/X	  -RPM+1		    -RPM-1      -COPIA VALORES ENTRE MOTORES (Cada n seg. cambia de pareja de motores (A)-(B) / (B)-(C) / (A)-(C).
+                                                        Titila el dibujo para indicar esta acciï¿½n.
+                                                        Al soltar, el segundo motor toma los valores del primero.
 
-(C) -[  .S/Z/X					.RPM+10		.RPM-10		.?? 
-        -Reset RPM S/Z/X	        	-RPM+1		-RPM+1
+(B) ()  .S/Z/X					    .RPM+10		    .RPM-10		  .??
+        -Reset RPM S/Z/X	  -RPM+1		    -RPM-1
 
-(D) <>  .</>/X					.RPM+10		.RPM-10		.START/PAUSA
-        -Reset RPM </>/X	        	-RPM+1		-RPM+1		- reset general (por ahora, todo, rpms, rotaciones, etc)
+(C) -[  .S/Z/X					    .RPM+10		    .RPM-10		  .??
+        -Reset RPM S/Z/X	  -RPM+1		    -RPM-1
 
-* sobre resets, se resetea SOLO lo que está seleccionado. Ejemplo, si el display muestra Z se resetea el contador rpm de Z y no ambos.
-	 En el caso de que X esté seleccionado, se resetean ambos.
+(D) <>  .</>/X					    .RPM+10		    .RPM-10		  .START/PAUSA
+        -Reset RPM </>/X	  -RPM+1		    -RPM+1		  -Reset general (por ahora, todo, rpms, rotaciones, etc)
 
-S = Rotación izquierda (antihoraria)
-Z = Rotación derecha (horaria)
-X = Sin rotación (no aparece en display)
+* sobre resets, se resetea SOLO lo que estï¿½ seleccionado. Ejemplo, si el display muestra Z se resetea el contador rpm de Z y no ambos.
+	 En el caso de que X estï¿½ seleccionado, se resetean ambos.
+
+S = Rotaciï¿½n izquierda (antihoraria)
+Z = Rotaciï¿½n derecha (horaria)
+X = Sin rotaciï¿½n (no aparece en display)
 -----------------------------------------------------------------------------------------
 	
 

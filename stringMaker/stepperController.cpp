@@ -1,7 +1,8 @@
 #include <Arduino.h>
+#include "config.h"
 #include "stepperController.h"
 
-StepperController::StepperController(int stepPin, int dirPin, int enablePin, int microsteps, int steps)
+StepperController::StepperController(sRowAxis rowAxis, int stepPin, int dirPin, int enablePin, int microsteps, int steps)
 {
     this->stepPin = stepPin;
     this->dirPin = dirPin;
@@ -10,6 +11,7 @@ StepperController::StepperController(int stepPin, int dirPin, int enablePin, int
     this->steps = steps;
     this->running = false;
     this->rpm = 0;
+    this->rowAxis = rowAxis;
 
     this->resolution = (float)360 / (float)(steps * this->microsteps); // resolution is constant after this
 
@@ -40,17 +42,17 @@ void StepperController::spin(int rpm, char direction)
     {
         this->setDirection(direction);
 
-        this->doStep(T);
+        this->doStep(T, direction);
     }
 }
 
-void StepperController::step(int steps, int rpm, int direction)
+void StepperController::step(int steps, int rpm, int direction, bool countTurns = true)
 {
     for (int i = 0; i < steps; ++i)
     {
         this->setDirection(direction);
 
-        this->doStep(T);
+        this->doStep(T, direction, countTurns);
     }
 }
 
@@ -60,10 +62,10 @@ void StepperController::stepFromAxis(int axisValue, int minRPM, int maxRPM)
     int mappedRPM = map(axisValue, 0, 1023, minRPM, maxRPM);
 
     // Determine the direction based on joystick value
-    int direction = (axisValue > 512) ? 1 : -1; // Assuming joystick center is around 512, adjust if necessary
+    int direction = (axisValue > 512) ? 1 : -1; // TODO adjust if necessary, the joystick might be misaligned
 
     // Move the stepper motor
-    this->step(1, mappedRPM, direction);
+    this->step(1, mappedRPM, direction, false);
 }
 
 void StepperController::enable()
@@ -88,12 +90,26 @@ void StepperController::setDirection(char direction)
     }
 }
 
-void StepperController::doStep(float T)
+void StepperController::doStep(float T, char direction, bool countTurns = true)
 {
     digitalWrite(this->stepPin, HIGH);
     delayMicroseconds(T);
     digitalWrite(this->stepPin, LOW);
     delayMicroseconds(T);
+
+    // Update rotations for row axis
+    // Some actions don't count, such as the joystick
+    if (countTurns)
+    {
+        if (direction == 's')
+        {
+            rowAxis.turnsS++;
+        }
+        else if (direction == 'z')
+        {
+            rowAxis.turnsZ++;
+        }
+    }
 }
 
 // This function calculates the period in terms of frequency and returns half of the period vale in microseconds
