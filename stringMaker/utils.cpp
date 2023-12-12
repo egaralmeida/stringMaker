@@ -14,3 +14,10 @@ String rightJustify(int num, byte digits) {
     
     return numStr;
 }
+
+int rightJus(int num, byte firstPos, byte digits) {
+    String numStr = String(num);
+    int numDigits = numStr.length(); 
+
+    return (digits - numDigits) + firstPos; 
+}

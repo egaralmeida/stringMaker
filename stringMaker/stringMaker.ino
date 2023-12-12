@@ -145,7 +145,7 @@ void state_running()
   {
     if (rowAxis[i].rotation != 'x')
     {
-      
+
       motor[i].spin(rowAxis[i].currentRPM, rowAxis[i].rotation);
       motor[i].start();
     }
@@ -158,8 +158,8 @@ void state_running()
 void checkJoystick()
 {
   // TODO: set max rpm
-  //motor[1].stepFromAxis(analogRead(JOY_PIN_X), 0, 80);
-  //motor[3].stepFromAxis(analogRead(JOY_PIN_Y), 0, 80);
+  // motor[1].stepFromAxis(analogRead(JOY_PIN_X), 0, 80);
+  // motor[3].stepFromAxis(analogRead(JOY_PIN_Y), 0, 80);
   /* TODO
     fuera de Start, mueve B y D con vertical y horizontal respectivamente
     Durante start, lo mismo SALVO que B o D estén en modo S o modo Z (si están en X los podes mover con joystick)
@@ -172,9 +172,11 @@ void updateDisplay()
   lcd.clear();
 
   // Row icons
-  // String displayRow[4] = {"\4\5  ", "\2\3  ", "\4\5  ", "\6\7  "};
-  String displayRow[4] = {"]-  ", "))  ", "-[  ", "<>  "};
-  
+  // String rowSymbol[4] = {"\4\5  ", "\2\3  ", "\4\5  ", "\6\7  "};
+  String rowSymbol[4] = {"]-",
+                          "))",
+                          "-[",
+                          "<>"};
 
   // 3 first rows are the same
   for (uint8_t i = 0; i < (BTNS_ROT - 1); i++)
@@ -182,63 +184,49 @@ void updateDisplay()
     String rotChar;
     if (rowAxis[i].rotation == 'x')
     {
-      rotChar = "  ";
+      rotChar = " ";
     }
     else
     {
-      rotChar = rowAxis[i].rotation + " ";
+      if(i < 3) {
+        rotChar = rowAxis[i].rotation;
+      }
+      else {
+        rotChar = rowAxis[i].rotation == 's' ? '<' : '>';   // The last row is not a rotation but a direction
+      }
     }
-/*
-  ]-  s 150  XXXs XXXz
-  ()  z 150  XXXs XXXz
-  -[    150  XXXs XXXz
-  <>  <  40  XXX> XXX< 
-*/
-    // Might need to recompose this for turnsS and turnsZ, set the cursor
-    // TODO: remember to update below for the last row
-    displayRow[i] += String(rotChar) + 
-                    rightJustify(rowAxis[i].currentRPM) + "  " + 
-                    rightJustify(rowAxis[i].turnsS) + "s " + 
-                    rightJustify(rowAxis[i].turnsZ) + "z";
-    
-    // debugVarln(displayRow[i]);
 
-
-    // Place the cursor at the start of each row
     lcd.setCursor(0, i);
+    lcd.print(rowSymbol[i]); // display the row symbol
 
-    // Print the row
-    lcd.print(displayRow[i]);
+    lcd.setCursor(4, i);
+    lcd.print(String(rotChar)); // display rotation symbol
+
+    lcd.setCursor(rightJus(rowAxis[i].currentRPM, 6), i); // set the cursor for right justification
+    lcd.print(rowAxis[i].currentRPM);                     // display rpm
+
+    lcd.setCursor(rightJus(rowAxis[i].turnsS, 11), i);
+    lcd.print(rowAxis[i].turnsS); // display s turns
+
+    lcd.setCursor(14, i);
+    if(i < 3) {
+      lcd.print("s");
+    }
+    else {
+      lcd.print("<");   // The last row is not a rotation but a direction
+    }
+
+    lcd.setCursor(rightJus(rowAxis[i].turnsZ, 16), i);
+    lcd.print(rowAxis[i].turnsZ); // display z turns
+
+    lcd.setCursor(19, i);
+    if(i < 3) {
+      lcd.print("z");   // The last row is not a rotation but a direction
+    }
+    else {
+      lcd.print(">");
+    }
   }
-
-  // Last row varies
-  char arrowDir;
-  if (rowAxis[ROW_D].rotation == 's')
-  {
-    arrowDir = '<';
-  }
-  else if (rowAxis[ROW_D].rotation == 'z')
-  {
-    arrowDir = '>';
-  }
-  else
-  {
-    arrowDir = ' ';
-  }
-
-  displayRow[ROW_D] += String(arrowDir) + " " + 
-                      rightJustify(rowAxis[ROW_D].currentRPM) + "  " + 
-                      rightJustify(rowAxis[ROW_D].turnsS) + "s " + 
-                      rightJustify(rowAxis[ROW_D].turnsZ) + "z";
-
-  // debugVarln(displayRow[ROW_D]);
-  // sdebugln(" ");
-
-  // Place the cursor at the start of row 4
-  lcd.setCursor(0, 3);
-
-  // Print the row
-  lcd.print(displayRow[ROW_D]);
 }
 
 // Key event raised
@@ -336,7 +324,7 @@ void buttonPressed(char key, bool released)
     // Start / Pause
     else if (key == specialButtonKeys[1])
     {
-      
+
       configState = configState ? false : true;
       Serial.println(configState);
     }

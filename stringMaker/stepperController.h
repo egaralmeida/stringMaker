@@ -14,6 +14,7 @@ private:
     float resolution;                           
     float T;                                    // its the inverse of the frequency divided by 2
     sRowAxis rowAxis;
+    unsigned int xrpm;
 
     void setDirection(char direction);
     void doStep(float T, char direction, bool countTurns = true);

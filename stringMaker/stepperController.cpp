@@ -10,10 +10,12 @@ StepperController::StepperController(sRowAxis rowAxis, int stepPin, int dirPin, 
     this->microsteps = microsteps;
     this->steps = steps;
     this->running = false;
-    this->rpm = 0;
+    this->rpm = this->rpm * this->microsteps;
     this->rowAxis = rowAxis;
 
-    this->resolution = (float)360 / (float)(this->steps * this->microsteps); // resolution is constant after this
+    this->resolution = (float)360 / (float)(this->steps * this->microsteps); // resolution is constant after this // TODO remove this
+
+    this->xrpm = 300000 / this->rpm;
 
     // Initialize pins
     pinMode(this->stepPin, OUTPUT);
@@ -36,7 +38,7 @@ void StepperController::stop()
 
 void StepperController::spin(int rpm, char direction)
 {
-    T = setRPM(rpm, resolution);
+    T = setRPM(rpm, resolution);    // TODO remove this
 
     if (this->running)
     {
@@ -92,23 +94,28 @@ void StepperController::setDirection(char direction)
 
 void StepperController::doStep(float T, char direction, bool countTurns = true)
 {
-    digitalWrite(this->stepPin, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(this->stepPin, LOW);
-    delayMicroseconds(10);
 
-    // Update rotations for row axis
-    // Some actions don't count, such as the joystick
-    if (countTurns)
+    if (micros() % xrpm < 100)
     {
-        if (direction == 's')
+        digitalWrite(this->stepPin, HIGH);
+
+        // Update rotations for row axis
+        // Some actions don't count, such as the joystick
+        if (countTurns)
         {
-            rowAxis.turnsS++;
+            if (direction == 's')
+            {
+                rowAxis.turnsS++;
+            }
+            else if (direction == 'z')
+            {
+                rowAxis.turnsZ++;
+            }
         }
-        else if (direction == 'z')
-        {
-            rowAxis.turnsZ++;
-        }
+    }
+    else
+    {
+        digitalWrite(this->stepPin, LOW);
     }
 }
 
