@@ -13,7 +13,7 @@ StepperController::StepperController(sRowAxis rowAxis, int stepPin, int dirPin, 
     this->rpm = 0;
     this->rowAxis = rowAxis;
 
-    this->resolution = (float)360 / (float)(steps * this->microsteps); // resolution is constant after this
+    this->resolution = (float)360 / (float)(this->steps * this->microsteps); // resolution is constant after this
 
     // Initialize pins
     pinMode(this->stepPin, OUTPUT);
@@ -93,9 +93,9 @@ void StepperController::setDirection(char direction)
 void StepperController::doStep(float T, char direction, bool countTurns = true)
 {
     digitalWrite(this->stepPin, HIGH);
-    delayMicroseconds(T);
+    delayMicroseconds(10);
     digitalWrite(this->stepPin, LOW);
-    delayMicroseconds(T);
+    delayMicroseconds(10);
 
     // Update rotations for row axis
     // Some actions don't count, such as the joystick

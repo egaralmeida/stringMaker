@@ -49,10 +49,10 @@ char rotations[3] = {'s', 'z', 'x'};
 sRowAxis rowAxis[BTNS_ROT];
 
 // Motors
-StepperController motor[] = {StepperController(rowAxis[ROW_A], MOTOR_PIN_A_STEP, MOTOR_PIN_A_DIR, MOTOR_PIN_A_ENABLED, 16, 200),
-                             StepperController(rowAxis[ROW_B], MOTOR_PIN_B_STEP, MOTOR_PIN_B_DIR, MOTOR_PIN_B_ENABLED, 16, 200),
-                             StepperController(rowAxis[ROW_C], MOTOR_PIN_C_STEP, MOTOR_PIN_C_DIR, MOTOR_PIN_C_ENABLED, 16, 200),
-                             StepperController(rowAxis[ROW_D], MOTOR_PIN_D_STEP, MOTOR_PIN_D_DIR, MOTOR_PIN_D_ENABLED, 16, 200)};
+StepperController motor[] = {StepperController(rowAxis[ROW_A], MOTOR_PIN_A_STEP, MOTOR_PIN_A_DIR, MOTOR_PIN_A_ENABLED, 32, 200),
+                             StepperController(rowAxis[ROW_B], MOTOR_PIN_B_STEP, MOTOR_PIN_B_DIR, MOTOR_PIN_B_ENABLED, 32, 200),
+                             StepperController(rowAxis[ROW_C], MOTOR_PIN_C_STEP, MOTOR_PIN_C_DIR, MOTOR_PIN_C_ENABLED, 32, 200),
+                             StepperController(rowAxis[ROW_D], MOTOR_PIN_D_STEP, MOTOR_PIN_D_DIR, MOTOR_PIN_D_ENABLED, 32, 200)};
 
 // Special buttons
 char specialButtonKeys[BTNS_SPECIAL];
@@ -68,7 +68,7 @@ void setup()
   keypad.addEventListener(keypadEvent);
 
   // Config PINS
-  // TODO
+  pinMode(MOTOR_PIN_A_ENABLED, OUTPUT);
 
   // Config display
   displaySetup();
@@ -77,34 +77,34 @@ void setup()
   rowAxis[ROW_A].buttonKeyUP = '1';
   rowAxis[ROW_A].buttonKeyDOWN = '2';
   rowAxis[ROW_A].buttonKey = '0';
-  rowAxis[ROW_A].currentRPM = 25;
+  rowAxis[ROW_A].currentRPM = 10;
   rowAxis[ROW_A].turnsS = 0;
   rowAxis[ROW_A].turnsZ = 0;
-  rowAxis[ROW_A].rotation = rotations[0];
+  rowAxis[ROW_A].rotation = 's';
 
   rowAxis[ROW_B].buttonKeyUP = '5';
   rowAxis[ROW_B].buttonKeyDOWN = '6';
   rowAxis[ROW_B].buttonKey = '4';
-  rowAxis[ROW_B].currentRPM = 25;
+  rowAxis[ROW_B].currentRPM = 10;
   rowAxis[ROW_B].turnsS = 0;
   rowAxis[ROW_B].turnsZ = 0;
-  rowAxis[ROW_B].rotation = rotations[0];
+  rowAxis[ROW_B].rotation = 's';
 
   rowAxis[ROW_C].buttonKeyUP = '9';
   rowAxis[ROW_C].buttonKeyDOWN = 'A';
   rowAxis[ROW_C].buttonKey = '8';
-  rowAxis[ROW_C].currentRPM = 25;
+  rowAxis[ROW_C].currentRPM = 10;
   rowAxis[ROW_C].turnsS = 0;
   rowAxis[ROW_C].turnsZ = 0;
-  rowAxis[ROW_C].rotation = rotations[0];
+  rowAxis[ROW_C].rotation = 'z';
 
   rowAxis[ROW_D].buttonKeyUP = 'D';
   rowAxis[ROW_C].buttonKeyDOWN = 'E';
   rowAxis[ROW_C].buttonKey = 'C';
-  rowAxis[ROW_C].currentRPM = 25;
+  rowAxis[ROW_C].currentRPM = 10;
   rowAxis[ROW_C].turnsS = 0;
   rowAxis[ROW_C].turnsZ = 0;
-  rowAxis[ROW_C].rotation = rotations[0];
+  rowAxis[ROW_C].rotation = 'x';
 
   specialButtonKeys[0] = '3';
   specialButtonKeys[1] = 'F';
@@ -112,13 +112,16 @@ void setup()
 
 void loop()
 {
+  char key = keypad.getKey();
 
   if (configState)
   {
+    digitalWrite(MOTOR_PIN_A_ENABLED, HIGH); // Disable motors
     state_config();
   }
   else
   {
+    digitalWrite(MOTOR_PIN_A_ENABLED, LOW); // Enable motors
     state_running();
   }
 }
@@ -142,10 +145,12 @@ void state_running()
   {
     if (rowAxis[i].rotation != 'x')
     {
+      
       motor[i].spin(rowAxis[i].currentRPM, rowAxis[i].rotation);
       motor[i].start();
     }
   }
+
   updateDisplay();
 }
 
@@ -153,8 +158,8 @@ void state_running()
 void checkJoystick()
 {
   // TODO: set max rpm
-  motor[1].stepFromAxis(analogRead(JOY_PIN_X), 0, 80);
-  motor[3].stepFromAxis(analogRead(JOY_PIN_Y), 0, 80);
+  //motor[1].stepFromAxis(analogRead(JOY_PIN_X), 0, 80);
+  //motor[3].stepFromAxis(analogRead(JOY_PIN_Y), 0, 80);
   /* TODO
     fuera de Start, mueve B y D con vertical y horizontal respectivamente
     Durante start, lo mismo SALVO que B o D estén en modo S o modo Z (si están en X los podes mover con joystick)
@@ -167,13 +172,37 @@ void updateDisplay()
   lcd.clear();
 
   // Row icons
-  String displayRow[4] = {"\0\1  ", "\2\3  ", "\4\5  ", "\6\7  "};
+  // String displayRow[4] = {"\4\5  ", "\2\3  ", "\4\5  ", "\6\7  "};
+  String displayRow[4] = {"]-  ", "))  ", "-[  ", "<>  "};
+  
 
   // 3 first rows are the same
-  for (int i = 0; i < BTNS_ROT - 1; i++)
+  for (uint8_t i = 0; i < (BTNS_ROT - 1); i++)
   {
-    displayRow[i] += rowAxis[i].rotation == 'x' ? ' ' : rowAxis[i].rotation + " " + rightJustify(rowAxis[i].currentRPM) + "  " + rightJustify(rowAxis[i].turnsS) + "s " + rightJustify(rowAxis[i].turnsZ) + "z";
-    debugVarln(displayRow[i]);
+    String rotChar;
+    if (rowAxis[i].rotation == 'x')
+    {
+      rotChar = "  ";
+    }
+    else
+    {
+      rotChar = rowAxis[i].rotation + " ";
+    }
+/*
+  ]-  s 150  XXXs XXXz
+  ()  z 150  XXXs XXXz
+  -[    150  XXXs XXXz
+  <>  <  40  XXX> XXX< 
+*/
+    // Might need to recompose this for turnsS and turnsZ, set the cursor
+    // TODO: remember to update below for the last row
+    displayRow[i] += String(rotChar) + 
+                    rightJustify(rowAxis[i].currentRPM) + "  " + 
+                    rightJustify(rowAxis[i].turnsS) + "s " + 
+                    rightJustify(rowAxis[i].turnsZ) + "z";
+    
+    // debugVarln(displayRow[i]);
+
 
     // Place the cursor at the start of each row
     lcd.setCursor(0, i);
@@ -184,11 +213,11 @@ void updateDisplay()
 
   // Last row varies
   char arrowDir;
-  if (rowAxis[3].rotation == 's')
+  if (rowAxis[ROW_D].rotation == 's')
   {
     arrowDir = '<';
   }
-  else if (rowAxis[3].rotation == 'z')
+  else if (rowAxis[ROW_D].rotation == 'z')
   {
     arrowDir = '>';
   }
@@ -196,16 +225,20 @@ void updateDisplay()
   {
     arrowDir = ' ';
   }
-  displayRow[3] += arrowDir + " " + rightJustify(rowAxis[3].currentRPM) + "  " + rightJustify(rowAxis[3].turnsS) + "s " + rightJustify(rowAxis[3].turnsZ) + "z";
 
-  debugVarln(displayRow[3]);
-  debugln(" ");
+  displayRow[ROW_D] += String(arrowDir) + " " + 
+                      rightJustify(rowAxis[ROW_D].currentRPM) + "  " + 
+                      rightJustify(rowAxis[ROW_D].turnsS) + "s " + 
+                      rightJustify(rowAxis[ROW_D].turnsZ) + "z";
+
+  // debugVarln(displayRow[ROW_D]);
+  // sdebugln(" ");
 
   // Place the cursor at the start of row 4
   lcd.setCursor(0, 3);
 
   // Print the row
-  lcd.print(displayRow[3]);
+  lcd.print(displayRow[ROW_D]);
 }
 
 // Key event raised
@@ -222,7 +255,8 @@ void keypadEvent(KeypadEvent key)
     break;
 
   case RELEASED:
-    buttonPressed(key, true);
+    // buttonPressed(key, true);
+    //  TODO
     break;
 
   case HOLD:
@@ -302,7 +336,9 @@ void buttonPressed(char key, bool released)
     // Start / Pause
     else if (key == specialButtonKeys[1])
     {
+      
       configState = configState ? false : true;
+      Serial.println(configState);
     }
   }
 }
