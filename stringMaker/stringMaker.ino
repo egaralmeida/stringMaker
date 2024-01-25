@@ -18,10 +18,16 @@ const byte COLS = 4;
 
 // Keymap
 char hexaKeys[ROWS][COLS] = {
+    {'F', 'E', 'D', 'C'},
+    {'B', 'A', '9', '8'},
+    {'7', '6', '5', '4'},   
+    {'3', '2', '1', '0'}};  
+    /*
+    char hexaKeys[ROWS][COLS] = {
     {'0', '1', '2', '3'},
     {'4', '5', '6', '7'},
     {'8', '9', 'A', 'B'},
-    {'C', 'D', 'E', 'F'}};
+    {'C', 'D', 'E', 'F'}};*/
 
 // Pinout
 byte rowPins[ROWS] = {KEYB_PIN_ROW_A, KEYB_PIN_ROW_B, KEYB_PIN_ROW_C, KEYB_PIN_ROW_D}; // row pins
@@ -99,12 +105,12 @@ void setup()
   rowAxis[ROW_C].rotation = 'z';
 
   rowAxis[ROW_D].buttonKeyUP = 'D';
-  rowAxis[ROW_C].buttonKeyDOWN = 'E';
-  rowAxis[ROW_C].buttonKey = 'C';
-  rowAxis[ROW_C].currentRPM = 10;
-  rowAxis[ROW_C].turnsS = 0;
-  rowAxis[ROW_C].turnsZ = 0;
-  rowAxis[ROW_C].rotation = 'x';
+  rowAxis[ROW_D].buttonKeyDOWN = 'E';
+  rowAxis[ROW_D].buttonKey = 'C';
+  rowAxis[ROW_D].currentRPM = 10;
+  rowAxis[ROW_D].turnsS = 0;
+  rowAxis[ROW_D].turnsZ = 0;
+  rowAxis[ROW_D].rotation = 'x';
 
   specialButtonKeys[0] = '3';
   specialButtonKeys[1] = 'F';
@@ -179,7 +185,7 @@ void updateDisplay()
                           "<>"};
 
   // 3 first rows are the same
-  for (uint8_t i = 0; i < (BTNS_ROT - 1); i++)
+  for (uint8_t i = 0; i < BTNS_ROT; i++)
   {
     String rotChar;
     if (rowAxis[i].rotation == 'x')
@@ -258,6 +264,7 @@ void keypadEvent(KeypadEvent key)
 */
 void buttonPressed(char key, bool released)
 {
+  Serial.println(key);
   // Don't check keys unnecessarily
   if (key != specialButtonKeys[0] && key != specialButtonKeys[1])
   {
@@ -333,6 +340,7 @@ void buttonPressed(char key, bool released)
 
 /*
   Button Long Pressed Actions
+  TODO: Long press is not working properly, it uses the value of short press and then only increases one on long press.
 */
 void buttonHeld(char key)
 {
