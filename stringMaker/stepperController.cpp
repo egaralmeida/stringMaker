@@ -7,15 +7,15 @@ StepperController::StepperController(sRowAxis rowAxis, int stepPin, int dirPin, 
     this->stepPin = stepPin;
     this->dirPin = dirPin;
     this->enablePin = enablePin;
-    this->microsteps = microsteps;
-    this->steps = steps;
+    this->microsteps = microsteps; // 32 default
+    this->steps = steps;           // 200 default
     this->running = false;
-    this->rpm = this->rpm * this->microsteps;
+    this->rpm = 0;
+    this->rpmMicroSteps = 0;
+    this->rpm_x = 0;
     this->rowAxis = rowAxis;
 
-    this->resolution = (float)360 / (float)(this->steps * this->microsteps); // resolution is constant after this // TODO remove this
-
-    this->xrpm = 300000 / this->rpm;
+    this->resolution = (float)360 / (float)(this->steps * this->microsteps); // resolution is constant after this
 
     // Initialize pins
     pinMode(this->stepPin, OUTPUT);
@@ -38,13 +38,14 @@ void StepperController::stop()
 
 void StepperController::spin(int rpm, char direction)
 {
-    T = setRPM(rpm, resolution);    // TODO remove this
-
     if (this->running)
     {
         this->setDirection(direction);
-
-        this->doStep(T, direction);
+        this->rpmMicroSteps = rpm * rpmMicroSteps;
+        this->rpm_x = 300000 / rpmMicroSteps;
+        while(this->doStep(direction, micros() % this->rpm_x < 100, true)) {
+        
+        }
     }
 }
 
@@ -53,8 +54,10 @@ void StepperController::step(int steps, int rpm, int direction, bool countTurns 
     for (int i = 0; i < steps; ++i)
     {
         this->setDirection(direction);
-
-        this->doStep(T, direction, countTurns);
+        this->rpmMicroSteps = rpm * this->microsteps;
+        this->rpm_x = 300000 / rpmMicroSteps;
+        
+        while (!this->doStep(direction, micros() % this->rpm_x < 100, countTurns)) {};
     }
 }
 
@@ -92,15 +95,20 @@ void StepperController::setDirection(char direction)
     }
 }
 
-void StepperController::doStep(float T, char direction, bool countTurns = true)
+bool StepperController::doStep(char direction, bool state, bool countTurns = true)
 {
-
-    if (micros() % xrpm < 100)
+    if (state)
     {
         digitalWrite(this->stepPin, HIGH);
+        Serial.print(1);
+        return false;
+    }
+    else
+    {
+        Serial.print(0);
+        digitalWrite(this->stepPin, LOW);
 
         // Update rotations for row axis
-        // Some actions don't count, such as the joystick
         if (countTurns)
         {
             if (direction == 's')
@@ -112,18 +120,7 @@ void StepperController::doStep(float T, char direction, bool countTurns = true)
                 rowAxis.turnsZ++;
             }
         }
-    }
-    else
-    {
-        digitalWrite(this->stepPin, LOW);
-    }
-}
 
-// This function calculates the period in terms of frequency and returns half of the period vale in microseconds
-// from https://github.com/RaulPerezSanchez/Arduino-Stepper-RPM
-float StepperController::setRPM(int rpm, float res)
-{
-    float freq = (float)rpm / ((res / 360) * 60); // calculates the frequency to a related RPM
-    float period = 1 / freq;                      // calculates the inverse of the frequency A.K.A the period
-    return (period * 0.5) * 1000000;              // returns half of the period in microseconds
+        return true;
+    }
 }

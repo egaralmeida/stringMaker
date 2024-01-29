@@ -1,0 +1,27 @@
+/**
+   Maquina de Cuerdas de Guido Wardak
+   @author Egar Almeida
+*/
+
+//#include <Keypad.h>
+//#include <LiquidCrystal_PCF8574.h>
+#include "config.h"
+#include "stepperController.h"
+#include "utils.h"
+
+
+sRowAxis rowAxis;
+
+StepperController stepper(rowAxis, MOTOR_PIN_D_STEP, MOTOR_PIN_D_DIR, MOTOR_PIN_A_ENABLED, 8, 200);
+
+void setup() {
+   pinMode(MOTOR_PIN_A_ENABLED, OUTPUT);
+
+  Serial.begin(115200);
+}
+
+void loop() {
+  digitalWrite(MOTOR_PIN_A_ENABLED, LOW);
+  stepper.start();
+  stepper.spin(60, 's');
+}

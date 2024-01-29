@@ -10,18 +10,18 @@ private:
     int steps;
     int microsteps;
     int rpm;
+    int rpmMicroSteps;
+    unsigned int rpm_x;
     bool running;
     float resolution;                           
     float T;                                    // its the inverse of the frequency divided by 2
     sRowAxis rowAxis;
-    unsigned int xrpm;
-
+    
     void setDirection(char direction);
-    void doStep(float T, char direction, bool countTurns = true);
-    float setRPM(int rpm, float res);
+    bool doStep(char direction, bool state, bool countTurns = true);
 
 public:
-    StepperController(sRowAxis myButton, int stepPin, int dirPin, int enablePin, int microsteps = 16, int steps = 200);
+    StepperController(sRowAxis myButton, int stepPin, int dirPin, int enablePin, int microsteps = 32, int steps = 200);
 
     void start();
     void stop();

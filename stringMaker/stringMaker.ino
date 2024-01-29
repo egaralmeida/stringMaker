@@ -1,8 +1,3 @@
-/**
-   Maquina de Cuerdas de Guido Wardak
-   @author Egar Almeida
-*/
-
 #include <Keypad.h>
 #include <LiquidCrystal_PCF8574.h>
 #include "config.h"
@@ -20,14 +15,14 @@ const byte COLS = 4;
 char hexaKeys[ROWS][COLS] = {
     {'F', 'E', 'D', 'C'},
     {'B', 'A', '9', '8'},
-    {'7', '6', '5', '4'},   
-    {'3', '2', '1', '0'}};  
-    /*
-    char hexaKeys[ROWS][COLS] = {
-    {'0', '1', '2', '3'},
-    {'4', '5', '6', '7'},
-    {'8', '9', 'A', 'B'},
-    {'C', 'D', 'E', 'F'}};*/
+    {'7', '6', '5', '4'},
+    {'3', '2', '1', '0'}};
+/*
+char hexaKeys[ROWS][COLS] = {
+{'0', '1', '2', '3'},
+{'4', '5', '6', '7'},
+{'8', '9', 'A', 'B'},
+{'C', 'D', 'E', 'F'}};*/
 
 // Pinout
 byte rowPins[ROWS] = {KEYB_PIN_ROW_A, KEYB_PIN_ROW_B, KEYB_PIN_ROW_C, KEYB_PIN_ROW_D}; // row pins
@@ -48,6 +43,10 @@ LiquidCrystal_PCF8574 lcd(0x27); // lcd(0x27);
 #define BTNS_SPECIAL 2
 
 bool configState = true;
+bool releasedAllowed = true;
+
+unsigned long holdTime = 0; // time when a key was first held down
+char heldKey = NO_KEY;      // the key that is being held down
 
 // Buttons
 char rotations[3] = {'s', 'z', 'x'};
@@ -72,6 +71,8 @@ void setup()
 
   // Config keyboard
   keypad.addEventListener(keypadEvent);
+  keypad.setHoldTime(500); // how long to press for long press
+  keypad.setDebounceTime(2);
 
   // Config PINS
   pinMode(MOTOR_PIN_A_ENABLED, OUTPUT);
@@ -120,6 +121,13 @@ void loop()
 {
   char key = keypad.getKey();
 
+  // if a key is being held down, and it's been more than 100ms since the last action
+  if (heldKey != NO_KEY && millis() - holdTime >= 500)
+  {
+    buttonHeld(heldKey);
+    holdTime = millis(); // update the hold time
+  }
+
   if (configState)
   {
     digitalWrite(MOTOR_PIN_A_ENABLED, HIGH); // Disable motors
@@ -151,9 +159,9 @@ void state_running()
   {
     if (rowAxis[i].rotation != 'x')
     {
-
-      motor[i].spin(rowAxis[i].currentRPM, rowAxis[i].rotation);
       motor[i].start();
+      motor[i].spin(rowAxis[i].currentRPM, rowAxis[i].rotation);
+      //Serial.println(rowAxis[i].currentRPM);
     }
   }
 
@@ -174,15 +182,12 @@ void checkJoystick()
 
 void updateDisplay()
 {
-  // CLS
-  lcd.clear();
-
   // Row icons
   // String rowSymbol[4] = {"\4\5  ", "\2\3  ", "\4\5  ", "\6\7  "};
   String rowSymbol[4] = {"]-",
-                          "))",
-                          "-[",
-                          "<>"};
+                         "))",
+                         "-[",
+                         "<>"};
 
   // 3 first rows are the same
   for (uint8_t i = 0; i < BTNS_ROT; i++)
@@ -194,11 +199,13 @@ void updateDisplay()
     }
     else
     {
-      if(i < 3) {
+      if (i < 3)
+      {
         rotChar = rowAxis[i].rotation;
       }
-      else {
-        rotChar = rowAxis[i].rotation == 's' ? '<' : '>';   // The last row is not a rotation but a direction
+      else
+      {
+        rotChar = rowAxis[i].rotation == 's' ? '<' : '>'; // The last row is not a rotation but a direction
       }
     }
 
@@ -215,21 +222,25 @@ void updateDisplay()
     lcd.print(rowAxis[i].turnsS); // display s turns
 
     lcd.setCursor(14, i);
-    if(i < 3) {
+    if (i < 3)
+    {
       lcd.print("s");
     }
-    else {
-      lcd.print("<");   // The last row is not a rotation but a direction
+    else
+    {
+      lcd.print("<"); // The last row is not a rotation but a direction
     }
 
     lcd.setCursor(rightJus(rowAxis[i].turnsZ, 16), i);
     lcd.print(rowAxis[i].turnsZ); // display z turns
 
     lcd.setCursor(19, i);
-    if(i < 3) {
-      lcd.print("z");   // The last row is not a rotation but a direction
+    if (i < 3)
+    {
+      lcd.print("z"); // The last row is not a rotation but a direction
     }
-    else {
+    else
+    {
       lcd.print(">");
     }
   }
@@ -238,23 +249,26 @@ void updateDisplay()
 // Key event raised
 void keypadEvent(KeypadEvent key)
 {
-
-  char currKey = key;
-  KeyState action = keypad.getState();
-
-  switch (action)
+  switch (keypad.getState())
   {
   case PRESSED:
     buttonPressed(key, false);
+    heldKey = key;       // store the key that is being pressed
+    holdTime = millis(); // store the current time
+    releasedAllowed = true;
     break;
-
-  case RELEASED:
-    // buttonPressed(key, true);
-    //  TODO
-    break;
-
   case HOLD:
-    buttonHeld(key);
+    // do nothing
+    break;
+  case RELEASED:
+    if (heldKey != NO_KEY)
+    {
+      if (releasedAllowed == true)
+      {
+        buttonPressed(heldKey, true);
+      }
+      heldKey = NO_KEY; // clear the held key
+    }
     break;
   }
 }
@@ -264,7 +278,7 @@ void keypadEvent(KeypadEvent key)
 */
 void buttonPressed(char key, bool released)
 {
-  Serial.println(key);
+  //Serial.println(key);
   // Don't check keys unnecessarily
   if (key != specialButtonKeys[0] && key != specialButtonKeys[1])
   {
@@ -273,35 +287,41 @@ void buttonPressed(char key, bool released)
     {
       if (key == rowAxis[i].buttonKey)
       {
-        cycleButton(i);
+        if (!released)
+        {
+          cycleButton(i);
+        }
         break;
       }
       else if (key == rowAxis[i].buttonKeyUP)
       {
-
-        // Limited to 999 RPM for display safety (3 digits)
-        if (rowAxis[i].currentRPM <= 989)
+        if (released)
         {
-          rowAxis[i].currentRPM += 10;
+          // Limited to 999 RPM for display safety (3 digits)
+          if (rowAxis[i].currentRPM <= 989)
+          {
+            rowAxis[i].currentRPM += 10;
+          }
+          else
+          {
+            rowAxis[i].currentRPM = 999;
+          }
         }
-        else
-        {
-          rowAxis[i].currentRPM = 999;
-        }
-
         break;
       }
       else if (key == rowAxis[i].buttonKeyDOWN)
       {
-        if (rowAxis[i].currentRPM >= 10)
+        if (released)
         {
-          rowAxis[i].currentRPM -= 10;
+          if (rowAxis[i].currentRPM >= 10)
+          {
+            rowAxis[i].currentRPM -= 10;
+          }
+          else
+          {
+            rowAxis[i].currentRPM = 0;
+          }
         }
-        else
-        {
-          rowAxis[i].currentRPM = 0;
-        }
-
         break;
       }
     }
@@ -312,30 +332,36 @@ void buttonPressed(char key, bool released)
     // Lathe mode
     if (key == specialButtonKeys[0])
     {
-      // Copia RPM de A a C e invierte el sentido de giro entre ambos
-      if (rowAxis[ROW_A].rotation != 'x')
+      if (!released)
       {
-        // Overwrite C with A
-        rowAxis[ROW_C].currentRPM = rowAxis[ROW_A].currentRPM;
+        // Copia RPM de A a C e invierte el sentido de giro entre ambos
+        if (rowAxis[ROW_A].rotation != 'x')
+        {
+          // Overwrite C with A
+          rowAxis[ROW_C].currentRPM = rowAxis[ROW_A].currentRPM;
 
-        if (rowAxis[ROW_A].rotation == 's')
-        {
-          rowAxis[ROW_C].rotation = 'z';
-        }
-        else if (rowAxis[ROW_A].rotation == 'z')
-        {
-          rowAxis[ROW_C].rotation = 's';
+          if (rowAxis[ROW_A].rotation == 's')
+          {
+            rowAxis[ROW_C].rotation = 'z';
+          }
+          else if (rowAxis[ROW_A].rotation == 'z')
+          {
+            rowAxis[ROW_C].rotation = 's';
+          }
         }
       }
     }
     // Start / Pause
     else if (key == specialButtonKeys[1])
     {
-
-      configState = configState ? false : true;
-      Serial.println(configState);
+      if (!released)
+      {
+        configState = configState ? false : true;
+        Serial.println(configState);
+      }
     }
   }
+  lcd.clear();
 }
 
 /*
@@ -344,6 +370,8 @@ void buttonPressed(char key, bool released)
 */
 void buttonHeld(char key)
 {
+  releasedAllowed = false;
+
   // Don't check keys unnecessarily
   if (key != specialButtonKeys[0] && key != specialButtonKeys[1])
   {
@@ -399,6 +427,7 @@ void buttonHeld(char key)
       // TODO
     }
   }
+  lcd.clear();
 }
 
 void cycleButton(byte i)
@@ -420,6 +449,7 @@ void cycleButton(byte i)
 void rowReset(byte row)
 {
   // TODO
+  lcd.clear();
 }
 
 void displaySetup()

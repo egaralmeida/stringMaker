@@ -1,5 +1,5 @@
-#define X_STEP_PIN         2
-#define X_DIR_PIN          5
+#define X_STEP_PIN         12
+#define X_DIR_PIN          13
 #define X_ENABLE_PIN       8
 
 // RPMs del motor
@@ -52,4 +52,3 @@ void doStep(int pin, bool state) {
     digitalWrite(pin, LOW);
   }
 }
-
