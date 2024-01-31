@@ -160,7 +160,7 @@ void state_running()
     // if (rowAxis[i].rotation != 'x')
     // {
     motor[i].start();
-    motor[i].spin(20);
+    motor[i].spin(60);
     // Serial.println(rowAxis[i].currentRPM);
     //}
   }

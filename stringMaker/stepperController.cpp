@@ -3,6 +3,7 @@
 #include "stepperController.h"
 
 StepperController::StepperController(sRowAxis rowAxis, int stepPin, int dirPin, int enablePin, int microsteps, int steps)
+    : stepper(AccelStepper::DRIVER, stepPin, dirPin) 
 {
     this->stepPin = stepPin;
     this->dirPin = dirPin;
@@ -14,7 +15,7 @@ StepperController::StepperController(sRowAxis rowAxis, int stepPin, int dirPin, 
     this->rowAxis = rowAxis;
     this->currentSteps = 0;
 
-    AccelStepper stepper(AccelStepper::DRIVER, this->stepPin, this->dirPin);
+    //AccelStepper stepper(AccelStepper::DRIVER, this->stepPin, this->dirPin);
 
     // Initialize pins
     pinMode(this->stepPin, OUTPUT);
@@ -128,7 +129,7 @@ void StepperController::setRPM(int rpm)
     float stepsPerSecond = (rpm * this->steps) / 60;
     this->stepper.setSpeed(stepsPerSecond);
 }
-
+/*
 bool StepperController::doStep(char direction, bool state, bool countTurns = true)
 {
     if (state)
@@ -157,4 +158,4 @@ bool StepperController::doStep(char direction, bool state, bool countTurns = tru
 
         return true;
     }
-}
+}*/
