@@ -7,15 +7,14 @@ StepperController::StepperController(sRowAxis rowAxis, int stepPin, int dirPin, 
     this->stepPin = stepPin;
     this->dirPin = dirPin;
     this->enablePin = enablePin;
-    this->microsteps = microsteps; // 32 default
-    this->steps = steps;           // 200 default
+    this->microsteps = microsteps;
+    this->steps = steps * microsteps;
     this->running = false;
     this->rpm = 0;
-    this->rpmMicroSteps = 0;
-    this->rpm_x = 0;
     this->rowAxis = rowAxis;
+    this->currentSteps = 0;
 
-    this->resolution = (float)360 / (float)(this->steps * this->microsteps); // resolution is constant after this
+    AccelStepper stepper(AccelStepper::DRIVER, this->stepPin, this->dirPin);
 
     // Initialize pins
     pinMode(this->stepPin, OUTPUT);
@@ -36,29 +35,49 @@ void StepperController::stop()
     this->running = false;
 }
 
-void StepperController::spin(int rpm, char direction)
+void StepperController::spin(int rpm, char direction, bool countTurns)
 {
+
+    static int prevRpm = 0;
+
     if (this->running)
     {
         this->setDirection(direction);
-        this->rpmMicroSteps = rpm * rpmMicroSteps;
-        this->rpm_x = 300000 / rpmMicroSteps;
-        while(this->doStep(direction, micros() % this->rpm_x < 100, true)) {
-        
+        if (rpm != prevRpm)
+        {
+            setRPM(rpm);
+            prevRpm = rpm;
+        }
+
+        if (stepper.runSpeed())
+        {
+            if (countTurns)
+            {
+                if (direction == 's')
+                {
+                    currentSteps--;
+                    if (currentSteps < -steps)
+                    {
+                        rowAxis.turnsS++;
+                        currentSteps = 0;
+                    }
+                }
+                else if (direction == 'z')
+                {
+                    currentSteps++;
+                    if (currentSteps > steps)
+                    {
+                        rowAxis.turnsZ++;
+                        currentSteps = 0;
+                    }
+                }
+            }
         }
     }
 }
 
-void StepperController::step(int steps, int rpm, int direction, bool countTurns = true)
+void StepperController::step(int steps, int rpm, int direction, bool countTurns)
 {
-    for (int i = 0; i < steps; ++i)
-    {
-        this->setDirection(direction);
-        this->rpmMicroSteps = rpm * this->microsteps;
-        this->rpm_x = 300000 / rpmMicroSteps;
-        
-        while (!this->doStep(direction, micros() % this->rpm_x < 100, countTurns)) {};
-    }
 }
 
 void StepperController::stepFromAxis(int axisValue, int minRPM, int maxRPM)
@@ -70,7 +89,7 @@ void StepperController::stepFromAxis(int axisValue, int minRPM, int maxRPM)
     int direction = (axisValue > 512) ? 1 : -1; // TODO adjust if necessary, the joystick might be misaligned
 
     // Move the stepper motor
-    this->step(1, mappedRPM, direction, false);
+    this->step(1, mappedRPM, direction);
 }
 
 void StepperController::enable()
@@ -85,14 +104,29 @@ void StepperController::disable()
 
 void StepperController::setDirection(char direction)
 {
-    if (direction == 's')
+    static char prevDirection = direction;
+
+    if (direction != prevDirection) // Don't change direction if its the same.
     {
-        digitalWrite(this->dirPin, HIGH); // Set direction clockwise (s)
+        if (direction == 's')
+        {
+            digitalWrite(this->dirPin, HIGH); // Set direction clockwise (s)
+            
+        }
+        else if (direction == 'z')
+        {
+            digitalWrite(this->dirPin, LOW); // Set direction counterclockwise (z)
+        }
+
+        prevDirection = direction;
     }
-    else if (direction == 'z')
-    {
-        digitalWrite(this->dirPin, LOW); // Set direction counterclockwise (z)
-    }
+}
+
+void StepperController::setRPM(int rpm)
+{
+    // Convert RPM to steps per second
+    float stepsPerSecond = (rpm * this->steps) / 60;
+    this->stepper.setSpeed(stepsPerSecond);
 }
 
 bool StepperController::doStep(char direction, bool state, bool countTurns = true)
