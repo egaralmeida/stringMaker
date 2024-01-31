@@ -29,12 +29,12 @@ byte rowPins[ROWS] = {KEYB_PIN_ROW_A, KEYB_PIN_ROW_B, KEYB_PIN_ROW_C, KEYB_PIN_R
 byte colPins[COLS] = {KEYB_PIN_COL_1, KEYB_PIN_COL_2, KEYB_PIN_COL_3, KEYB_PIN_COL_4}; // column pins
 
 // Create keypad object with our configuration
-Keypad keypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
+//Keypad keypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 
 /**
    Display Setup
 */
-LiquidCrystal_PCF8574 lcd(0x27); // lcd(0x27);
+//LiquidCrystal_PCF8574 lcd(0x27); // lcd(0x27);
 
 // Configuration variables
 
@@ -68,17 +68,17 @@ void setup()
 #ifdef DEBUG
   Serial.begin(115200);
 #endif
-
+/*
   // Config keyboard
   keypad.addEventListener(keypadEvent);
   keypad.setHoldTime(500); // how long to press for long press
   keypad.setDebounceTime(2);
-
+*/
   // Config PINS
   pinMode(MOTOR_PIN_A_ENABLED, OUTPUT);
 
   // Config display
-  displaySetup();
+  //displaySetup();
 
   // Config button actions
   rowAxis[ROW_A].buttonKeyUP = '1';
@@ -119,12 +119,12 @@ void setup()
 
 void loop()
 {
-  char key = keypad.getKey();
+  //char key = keypad.getKey();
 
   // if a key is being held down, and it's been more than 100ms since the last action
   if (heldKey != NO_KEY && millis() - holdTime >= 500)
   {
-    buttonHeld(heldKey);
+    //buttonHeld(heldKey);
     holdTime = millis(); // update the hold time
   }
 
@@ -143,8 +143,8 @@ void loop()
 // Machine is on configuration mode
 void state_config()
 {
-  checkJoystick();
-  updateDisplay();
+  //checkJoystick();
+  //updateDisplay();
 
   for (byte i = 0; i < 4; i++)
   {
@@ -161,11 +161,11 @@ void state_running()
     {
       motor[i].start();
       motor[i].spin(rowAxis[i].currentRPM, rowAxis[i].rotation);
-      //Serial.println(rowAxis[i].currentRPM);
+      // Serial.println(rowAxis[i].currentRPM);
     }
   }
 
-  updateDisplay();
+  //updateDisplay();
 }
 
 // Handle the joystick input
@@ -179,7 +179,7 @@ void checkJoystick()
     Durante start, lo mismo SALVO que B o D estén en modo S o modo Z (si están en X los podes mover con joystick)
   */
 }
-
+/*
 void updateDisplay()
 {
   // Row icons
@@ -275,11 +275,11 @@ void keypadEvent(KeypadEvent key)
 
 /*
   Button Pressed Actions
-*/
+
 void buttonPressed(char key, bool released)
 {
-  //Serial.println(key);
-  // Don't check keys unnecessarily
+  // Serial.println(key);
+  //  Don't check keys unnecessarily
   if (key != specialButtonKeys[0] && key != specialButtonKeys[1])
   {
     // Act on rotation and speed
@@ -367,7 +367,7 @@ void buttonPressed(char key, bool released)
 /*
   Button Long Pressed Actions
   TODO: Long press is not working properly, it uses the value of short press and then only increases one on long press.
-*/
+
 void buttonHeld(char key)
 {
   releasedAllowed = false;
@@ -483,3 +483,4 @@ void displaySetup()
 
   lcd.setBacklight(255);
 }
+*/
