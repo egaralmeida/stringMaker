@@ -135,7 +135,8 @@ void loop()
     }
     else
     {*/
-  digitalWrite(MOTOR_PIN_A_ENABLED, LOW); // Enable motors
+  // digitalWrite(MOTOR_PIN_A_ENABLED, LOW); // Enable motors
+
   state_running();
   // }
 }
@@ -159,8 +160,9 @@ void state_running()
   {
     // if (rowAxis[i].rotation != 'x')
     // {
+    motor[i].enable();
     motor[i].start();
-    motor[i].spin(60);
+    motor[i].spin(10);
     // Serial.println(rowAxis[i].currentRPM);
     //}
   }
@@ -273,7 +275,7 @@ void keypadEvent(KeypadEvent key)
   }
 }
 
-/*
+
   Button Pressed Actions
 
 void buttonPressed(char key, bool released)
@@ -364,7 +366,7 @@ void buttonPressed(char key, bool released)
   lcd.clear();
 }
 
-/*
+
   Button Long Pressed Actions
   TODO: Long press is not working properly, it uses the value of short press and then only increases one on long press.
 

@@ -25,17 +25,25 @@ StepperController::StepperController(sRowAxis rowAxis, int stepPin, int dirPin, 
     pinMode(this->enablePin, OUTPUT);
 
     // Enable by default
-    this->enable();
+    // this->enable();
 }
 
 void StepperController::start()
 {
-    this->running = true;
+    if (!this->running)
+    {
+        this->running = true;
+        this->enable();
+    }
 }
 
 void StepperController::stop()
 {
-    this->running = false;
+    if (this->running)
+    {
+        this->running = false;
+        this->disable();
+    }
 }
 
 void StepperController::spin(int rpm, char direction, bool countTurns)
@@ -78,7 +86,7 @@ void StepperController::spin(int rpm, char direction, bool countTurns)
     }
     else
     {
-        stepper.stop();
+        //stepper.setSpeed(0);
     }
 }
 

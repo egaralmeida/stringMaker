@@ -74,7 +74,7 @@
 
 /*
  * Special Chars
- */
+ 
 
 inline byte chrMotorRightA[] = {
     0b11111,
@@ -155,6 +155,8 @@ inline byte chrCircleB[] = {
     0b01100,
     0b11000,
     0b00000};
+
+*/
 
 struct sRowAxis
 {
