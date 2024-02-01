@@ -12,6 +12,8 @@ private:
     int steps;
     int microsteps;
     int rpm;
+    int prevRpm;
+    char prevDirection;
     bool running;
     float resolution;
     int currentSteps;         
