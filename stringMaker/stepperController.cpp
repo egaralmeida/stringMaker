@@ -113,7 +113,7 @@ void StepperController::enable()
 
 void StepperController::disable()
 {
-    digitalWrite(this->enablePin, HIGH);
+    //digitalWrite(this->enablePin, HIGH);
 }
 
 void StepperController::setDirection(char direction)
