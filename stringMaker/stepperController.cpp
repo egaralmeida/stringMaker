@@ -48,43 +48,46 @@ void StepperController::stop()
 
 void StepperController::spin(int rpm, char direction, bool countTurns)
 {
-    Serial.println("spin");
+    //Serial.println("spin");
     if (this->running)
     {
-        Serial.println("spin running");
+        //Serial.println("spin running");
         this->setDirection(direction);
 
         if (rpm != prevRpm)
         {
-            Serial.println("spin set rpm");
+            //Serial.println("spin set rpm");
             setRPM(rpm);
             prevRpm = rpm;
         }
 
         if (stepper.runSpeed())
         {
-            Serial.println("Runspeed");
+            //Serial.println("Runspeed");
             if (countTurns)
             {
                 if (direction == 's')
                 {
-                    Serial.print("spin runspeed direction = ");
+                    //Serial.print("spin runspeed direction = ");
                     Serial.println(direction);
 
                     currentSteps--;
                     if (currentSteps < -steps)
                     {
+                        Serial.println("revolution");
                         rowAxis.turnsS++;
                         currentSteps = 0;
                     }
                 }
                 else if (direction == 'z')
                 {
-                    Serial.print("spin runspeed direction = ");
+                    //Serial.print("spin runspeed direction = ");
                     Serial.println(direction);
+
                     currentSteps++;
                     if (currentSteps > steps)
                     {
+                        Serial.println("revolution");
                         rowAxis.turnsZ++;
                         currentSteps = 0;
                     }
