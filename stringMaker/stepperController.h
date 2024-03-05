@@ -20,7 +20,7 @@ private:
     sRowAxis rowAxis;
     AccelStepper stepper;
     
-    void setDirection(char direction);
+    void setDir(char direction);
     void setRPM(int rpm);
     bool doStep(char direction, bool state, bool countTurns = true);
 

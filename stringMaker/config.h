@@ -72,9 +72,7 @@
 #define MOTOR_PIN_D_STEP 12
 #define MOTOR_PIN_D_DIR 13
 
-/*
- * Special Chars
- 
+// Special Chars
 
 inline byte chrMotorRightA[] = {
     0b11111,
@@ -156,18 +154,15 @@ inline byte chrCircleB[] = {
     0b11000,
     0b00000};
 
-*/
-
 struct sRowAxis
 {
-  char buttonKey;
-  char buttonKeyUP;
-  char buttonKeyDOWN;
-  int currentRPM;
-  int turnsS;
-  int turnsZ;
-  char rotation;
+    char buttonKey;
+    char buttonKeyUP;
+    char buttonKeyDOWN;
+    int currentRPM;
+    int turnsS;
+    int turnsZ;
+    char rotation;
 };
-
 
 #endif
