@@ -55,10 +55,10 @@ char rotations[3] = {'s', 'z', 'x'};
 sRowAxis rowAxis[BTNS_ROT];
 
 // Motors
-StepperController motor[] = {StepperController(rowAxis[ROW_A], MOTOR_PIN_A_STEP, MOTOR_PIN_A_DIR, MOTOR_PIN_A_ENABLED, 32, 200),
-                             StepperController(rowAxis[ROW_B], MOTOR_PIN_B_STEP, MOTOR_PIN_B_DIR, MOTOR_PIN_B_ENABLED, 32, 200),
-                             StepperController(rowAxis[ROW_C], MOTOR_PIN_C_STEP, MOTOR_PIN_C_DIR, MOTOR_PIN_C_ENABLED, 32, 200),
-                             StepperController(rowAxis[ROW_D], MOTOR_PIN_D_STEP, MOTOR_PIN_D_DIR, MOTOR_PIN_D_ENABLED, 32, 200)};
+StepperController motor[] = {StepperController(rowAxis[ROW_A], MOTOR_PIN_A_STEP, MOTOR_PIN_A_DIR, MOTOR_PIN_A_ENABLED, 4, 200),
+                             StepperController(rowAxis[ROW_B], MOTOR_PIN_B_STEP, MOTOR_PIN_B_DIR, MOTOR_PIN_B_ENABLED, 4, 200),
+                             StepperController(rowAxis[ROW_C], MOTOR_PIN_C_STEP, MOTOR_PIN_C_DIR, MOTOR_PIN_C_ENABLED, 4, 200),
+                             StepperController(rowAxis[ROW_D], MOTOR_PIN_D_STEP, MOTOR_PIN_D_DIR, MOTOR_PIN_D_ENABLED, 4, 200)};
 
 // Special buttons
 char specialButtonKeys[BTNS_SPECIAL];

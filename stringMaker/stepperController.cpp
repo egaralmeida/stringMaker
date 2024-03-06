@@ -74,7 +74,7 @@ void StepperController::spin(int rpm, char direction, bool countTurns)
                     currentSteps--;
                     if (currentSteps < -steps)
                     {
-                        Serial.println("revolution");
+                        //Serial.println("revolution");
                         rowAxis.turnsS++;
                         currentSteps = 0;
                     }
@@ -82,12 +82,12 @@ void StepperController::spin(int rpm, char direction, bool countTurns)
                 else if (direction == 'z')
                 {
                     // Serial.print("spin runspeed direction = ");
-                    Serial.println(direction);
+                    //Serial.println(direction);
 
                     currentSteps++;
                     if (currentSteps > steps)
                     {
-                        Serial.println("revolution");
+                        //Serial.println("revolution");
                         rowAxis.turnsZ++;
                         currentSteps = 0;
                     }
