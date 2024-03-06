@@ -25,7 +25,7 @@ private:
     bool doStep(char direction, bool state, bool countTurns = true);
 
 public:
-    StepperController(sRowAxis myButton, int stepPin, int dirPin, int enablePin, int microsteps = 32, int steps = 200);
+    StepperController(sRowAxis myButton, int stepPin, int dirPin, int enablePin, int microsteps = 4, int steps = 200);
 
     void start();
     void stop();

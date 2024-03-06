@@ -157,12 +157,12 @@ void state_config()
 // Machine is running
 void state_running()
 {
-  for (byte i = 0; i < 1; i++)
+  for (byte i = 0; i < 3; i++)
   {
     if (rowAxis[i].rotation != 'x')
     {
       motor[i].start();
-      motor[i].spin(10, 's', true);
+      motor[i].spin(rowAxis[i].currentRPM, 's', true);
       // Serial.println(rowAxis[i].currentRPM);
     }
   }
