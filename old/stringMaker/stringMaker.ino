@@ -170,12 +170,11 @@ void state_running()
   updateDisplay();
 }
 
-// Handle the joystick input
+// Handle the joystick input, manual control
 void checkJoystick()
 {
   // TODO: set max rpm
-  // motor[1].stepFromAxis(analogRead(JOY_PIN_X), 0, 80);
-  // motor[3].stepFromAxis(analogRead(JOY_PIN_Y), 0, 80);
+  
   /* TODO
     fuera de Start, mueve B y D con vertical y horizontal respectivamente
     Durante start, lo mismo SALVO que B o D estén en modo S o modo Z (si están en X los podes mover con joystick)
