@@ -21,25 +21,40 @@
 #define JOY_MEGA_PIN_X A8
 #define JOY_MEGA_PIN_Y A9
 
+// Centralized Constants
+const int STEPS_PER_REV = 200;
+const unsigned long MIN_STEP_INTERVAL_US = 500;
+const unsigned int STEP_PULSE_WIDTH_US = 5;
+
+// Helper macros for direct port manipulation
+#define STEP_HIGH(m) (*((m).stepPort) |=  (1 << (m).stepBit))
+#define STEP_LOW(m)  (*((m).stepPort) &= ~(1 << (m).stepBit))
+#define DIR_HIGH(m)  (*((m).dirPort)  |=  (1 << (m).dirBit))
+#define DIR_LOW(m)   (*((m).dirPort)  &= ~(1 << (m).dirBit))
+
 // Define structure to hold motor settings
 struct Motor {
   int stepPin;
   int dirPin;
-  int rpm;         // Speed in RPM
-  bool dir;        // true for clockwise (Z), false for counterclockwise (S)
-  bool active;     // Motor active status
+  volatile uint8_t *stepPort;
+  uint8_t stepBit;
+  volatile uint8_t *dirPort;
+  uint8_t dirBit;
+  int rpm;                    // Speed in RPM
+  bool dir;                   // true for clockwise (Z), false for counterclockwise (S)
+  bool active;                // Motor active status
   unsigned long lastStepTime; // Last step timestamp for non-blocking control
-  unsigned int interval;      // Step interval in microseconds
+  unsigned long interval;     // Step interval in microseconds
   unsigned long turnCountZ;   // Rotation count in Z direction
   unsigned long turnCountS;   // Rotation count in S direction
 };
 
-// Create motor instances
+// Create motor instances (port pointers initialized in setup())
 Motor motors[4] = {
-  {MOTOR_PIN_A_STEP, MOTOR_PIN_A_DIR, 400, true, false, 0, 750, 0, 0},
-  {MOTOR_PIN_B_STEP, MOTOR_PIN_B_DIR, 400, true, false, 0, 750, 0, 0},
-  {MOTOR_PIN_C_STEP, MOTOR_PIN_C_DIR, 400, true, false, 0, 750, 0, 0},
-  {MOTOR_PIN_D_STEP, MOTOR_PIN_D_DIR, 400, true, false, 0, 750, 0, 0}
+  {MOTOR_PIN_A_STEP, MOTOR_PIN_A_DIR, nullptr, 0, nullptr, 0, 400, true, false, 0, 750, 0, 0},
+  {MOTOR_PIN_B_STEP, MOTOR_PIN_B_DIR, nullptr, 0, nullptr, 0, 400, true, false, 0, 750, 0, 0},
+  {MOTOR_PIN_C_STEP, MOTOR_PIN_C_DIR, nullptr, 0, nullptr, 0, 400, true, false, 0, 750, 0, 0},
+  {MOTOR_PIN_D_STEP, MOTOR_PIN_D_DIR, nullptr, 0, nullptr, 0, 400, true, false, 0, 750, 0, 0}
 };
 
 String incomingData = ""; // Buffer for incoming serial data
@@ -60,6 +75,31 @@ void setup() {
     pinMode(motors[i].stepPin, OUTPUT);
     pinMode(motors[i].dirPin, OUTPUT);
   }
+
+  // Initialize port pointers and bit masks for direct port manipulation
+  // Motor A: STEP=2 (PORTE, PE4), DIR=5 (PORTE, PE3)
+  motors[0].stepPort = &PORTE;
+  motors[0].stepBit = PE4;
+  motors[0].dirPort = &PORTE;
+  motors[0].dirBit = PE3;
+
+  // Motor B: STEP=3 (PORTE, PE5), DIR=6 (PORTH, PH3)
+  motors[1].stepPort = &PORTE;
+  motors[1].stepBit = PE5;
+  motors[1].dirPort = &PORTH;
+  motors[1].dirBit = PH3;
+
+  // Motor C: STEP=4 (PORTG, PG5), DIR=7 (PORTH, PH4)
+  motors[2].stepPort = &PORTG;
+  motors[2].stepBit = PG5;
+  motors[2].dirPort = &PORTH;
+  motors[2].dirBit = PH4;
+
+  // Motor D: STEP=12 (PORTB, PB6), DIR=13 (PORTB, PB7)
+  motors[3].stepPort = &PORTB;
+  motors[3].stepBit = PB6;
+  motors[3].dirPort = &PORTB;
+  motors[3].dirBit = PB7;
 
   // Set up shared enable pin, button, LED and start signal
   pinMode(MOTOR_PIN_B_ENABLED, OUTPUT);
@@ -149,9 +189,24 @@ void processIncomingData(String data) {
     } else {
       motors[i].rpm = rpm;
       motors[i].dir = (direction == 'Z'); // 'Z' for CW (true), 'S' for CCW (false)
-      motors[i].interval = 300000 / (rpm * 4); // Convert RPM to interval in µs
+      
+      // Calculate step interval using centralized constants
+      motors[i].interval = 60000000UL / (STEPS_PER_REV * rpm);
+      
+      // Clamp to minimum step interval
+      if (motors[i].interval < MIN_STEP_INTERVAL_US) {
+        motors[i].interval = MIN_STEP_INTERVAL_US;
+      }
+      
       motors[i].active = true;
-      digitalWrite(motors[i].dirPin, motors[i].dir ? HIGH : LOW);
+      
+      // Set direction with timing delay using direct port manipulation
+      if (motors[i].dir) {
+        DIR_HIGH(motors[i]);
+      } else {
+        DIR_LOW(motors[i]);
+      }
+      delayMicroseconds(STEP_PULSE_WIDTH_US);
     }
 
     // Debug
@@ -161,17 +216,19 @@ void processIncomingData(String data) {
     Serial.print(motors[i].dir ? "Clockwise (Z)" : "Counterclockwise (S)");
     Serial.print(", RPM: ");
     Serial.print(rpm);
-    Serial.print(", Active: ");
+    Serial.print(", Interval: ");
+    Serial.print(motors[i].interval);
+    Serial.print("us, Active: ");
     Serial.println(motors[i].active ? "Yes" : "No");
   }
 }
 
-// Non-blocking stepping
+// Non-blocking stepping with direct port manipulation
 void doStep(Motor &motor, unsigned long currentTime) {
   if (motor.active && (currentTime - motor.lastStepTime >= motor.interval)) {
-    digitalWrite(motor.stepPin, HIGH);
-    delayMicroseconds(10); 
-    digitalWrite(motor.stepPin, LOW);
+    STEP_HIGH(motor);
+    delayMicroseconds(STEP_PULSE_WIDTH_US);
+    STEP_LOW(motor);
     motor.lastStepTime = currentTime;
 
     // Increment rotation count based on direction
