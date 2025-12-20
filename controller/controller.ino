@@ -156,6 +156,10 @@ void sendMotorConfiguration() {
 
   command += "Q";  // End command with 'Q' as termination character
 
+  if (i == ROW_C && direction == 'X') {
+    Serial.println("ROW C DISABLED BY CONTROLLER");
+  }
+
   // Only send if command is different from the last sent command
   if (command != lastSentCommand) {
     driverSerial.println(command);  // Send new command
