@@ -45,8 +45,8 @@ struct Motor {
   bool active;                // Motor active status
   unsigned long lastStepTime; // Last step timestamp for non-blocking control
   unsigned long interval;     // Step interval in microseconds
-  unsigned long turnCountZ;   // Rotation count in Z direction
-  unsigned long turnCountS;   // Rotation count in S direction
+  unsigned long stepCountZ;   // Step count in Z direction (200 steps = 1 turn)
+  unsigned long stepCountS;   // Step count in S direction (200 steps = 1 turn)
 };
 
 // Create motor instances (port pointers initialized in setup())
@@ -183,23 +183,28 @@ void processIncomingData(String data) {
     char direction = data.charAt(index); // Direction (S, Z, or X)
     int rpm = data.substring(index + 1, index + 4).toInt();
 
-    if (direction == 'X') {
+    if (direction == 'X' || rpm <= 0) {
+      // 'X' or 0 RPM both mean "do not move" (also guards the interval division below)
       motors[i].active = false;
       motors[i].rpm = 0;
     } else {
       motors[i].rpm = rpm;
       motors[i].dir = (direction == 'Z'); // 'Z' for CW (true), 'S' for CCW (false)
-      
-      // Calculate step interval using centralized constants
-      motors[i].interval = 60000000UL / (STEPS_PER_REV * rpm);
-      
+
+      // Calculate step interval; force 32-bit math (200 * rpm overflows 16-bit int above 163 RPM)
+      motors[i].interval = 60000000UL / ((unsigned long)STEPS_PER_REV * (unsigned long)rpm);
+
       // Clamp to minimum step interval
       if (motors[i].interval < MIN_STEP_INTERVAL_US) {
         motors[i].interval = MIN_STEP_INTERVAL_US;
       }
-      
+
+      // Restart step scheduling when (re)activating so the motor doesn't burst to catch up
+      if (!motors[i].active) {
+        motors[i].lastStepTime = micros();
+      }
       motors[i].active = true;
-      
+
       // Set direction with timing delay using direct port manipulation
       if (motors[i].dir) {
         DIR_HIGH(motors[i]);
@@ -229,13 +234,22 @@ void doStep(Motor &motor, unsigned long currentTime) {
     STEP_HIGH(motor);
     delayMicroseconds(STEP_PULSE_WIDTH_US);
     STEP_LOW(motor);
-    motor.lastStepTime = currentTime;
 
-    // Increment rotation count based on direction
+    // Schedule from the previous deadline (not "now") so loop latency doesn't
+    // accumulate and lower the effective RPM
+    motor.lastStepTime += motor.interval;
+
+    // If we've fallen more than one full interval behind, resync instead of
+    // bursting steps to catch up
+    if (currentTime - motor.lastStepTime >= motor.interval) {
+      motor.lastStepTime = currentTime;
+    }
+
+    // Increment step count based on direction
     if (motor.dir) {
-      motor.turnCountZ++;
+      motor.stepCountZ++;
     } else {
-      motor.turnCountS++;
+      motor.stepCountS++;
     }
   }
 }
@@ -257,7 +271,11 @@ void handleButton() {
       digitalWrite(LED_PIN, systemActive ? HIGH : LOW);
       
       if (systemActive) {
-        // System starting
+        // System starting - reset counters so each run counts turns from zero
+        for (int i = 0; i < 4; i++) {
+          motors[i].stepCountZ = 0;
+          motors[i].stepCountS = 0;
+        }
         digitalWrite(MOTOR_PIN_B_ENABLED, LOW);  // Enable motors
         digitalWrite(START_SIGNAL_PIN, LOW);     // Signal controller we're running
         Serial.println("System STARTED - Motors enabled, waiting for config...");
@@ -278,29 +296,25 @@ void handleButton() {
   lastButtonState = currentButtonState;  // Update state for next iteration
 }
 
-// Report RPM counts every 500ms when running and once before stopping
+// Report cumulative turn counts every 500ms when running and once before stopping.
+// Counts accumulate for the whole run (reset on system start), so the controller
+// always displays the total number of turns wound so far.
 void reportRPMCounts() {
   String report = "R"; // Start with R
   char buffer[6];
 
   for (int i = 0; i < 4; i++) {
-    // Z direction
-    sprintf(buffer, "%05lu", motors[i].turnCountZ);
+    // Z direction: convert steps to whole turns, keep within 5 digits
+    sprintf(buffer, "%05lu", (motors[i].stepCountZ / STEPS_PER_REV) % 100000UL);
     report += buffer;
 
     // S direction
-    sprintf(buffer, "%05lu", motors[i].turnCountS);
+    sprintf(buffer, "%05lu", (motors[i].stepCountS / STEPS_PER_REV) % 100000UL);
     report += buffer;
   }
 
   report += "Q"; // End with Q
   Serial1.println(report); // Send to controller
-
-  // Reset counts after sending
-  for (int i = 0; i < 4; i++) {
-    motors[i].turnCountZ = 0;
-    motors[i].turnCountS = 0;
-  }
 
 #ifdef DEBUG
   Serial.println("Sent RPM report: " + report);

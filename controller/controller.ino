@@ -156,10 +156,6 @@ void sendMotorConfiguration() {
 
   command += "Q";  // End command with 'Q' as termination character
 
-  if (i == ROW_C && direction == 'X') {
-    Serial.println("ROW C DISABLED BY CONTROLLER");
-  }
-
   // Only send if command is different from the last sent command
   if (command != lastSentCommand) {
     driverSerial.println(command);  // Send new command
@@ -232,17 +228,19 @@ void updateDisplay() {
     lcd.setCursor(4, i);
     lcd.print(rotChar);
 
-    lcd.setCursor(rightJus(rowAxis[i].currentRPM, 6), i);
-    lcd.print(rowAxis[i].currentRPM);
+    // Print fixed-width, space-padded fields so shrinking values
+    // don't leave stale digits on screen
+    lcd.setCursor(6, i);
+    lcd.print(rightJustify(rowAxis[i].currentRPM, 3));
 
-    lcd.setCursor(rightJus(rowAxis[i].turnsS, 11), i);
-    lcd.print(rowAxis[i].turnsS);
+    lcd.setCursor(10, i);
+    lcd.print(rightJustify((int)min(rowAxis[i].turnsS, 9999L), 4));
 
     lcd.setCursor(14, i);
     lcd.print(i < 3 ? "s" : "<");
 
-    lcd.setCursor(rightJus(rowAxis[i].turnsZ, 16), i);
-    lcd.print(rowAxis[i].turnsZ);
+    lcd.setCursor(15, i);
+    lcd.print(rightJustify((int)min(rowAxis[i].turnsZ, 9999L), 4));
 
     lcd.setCursor(19, i);
     lcd.print(i < 3 ? "z" : ">");
@@ -315,6 +313,7 @@ void buttonHeld(char key) {
       break;
     } else if (key == rowAxis[i].buttonKeyUP) {
       rowAxis[i].currentRPM = min(rowAxis[i].currentRPM + 1, 999);
+      break;
     } else if (key == rowAxis[i].buttonKeyDOWN) {
       rowAxis[i].currentRPM = max(rowAxis[i].currentRPM - 1, 0);
       break;
