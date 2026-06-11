@@ -16,21 +16,6 @@
 #define debugVar(x)
 #endif
 
-#define DEBUG
-
-#ifdef DEBUG
-#define debugln(x) Serial.println(F(x))
-#define debug(x) Serial.print(F(x))
-#define debugVarln(x) Serial.println(x)
-#define debugVar(x) Serial.print(x)
-
-#else
-#define debugln(x)
-#define debug(x)
-#define debugVarln(x)
-#define debugVar(x)
-#endif
-
 #define ROW_A 0
 #define ROW_B 1
 #define ROW_C 2
@@ -138,8 +123,8 @@ struct sRowAxis
     char buttonKeyUP;
     char buttonKeyDOWN;
     int currentRPM;
-    int turnsS;
-    int turnsZ;
+    long turnsS;  // long: driver reports up to 99999 turns, which overflows a 16-bit int
+    long turnsZ;
     char rotation;
 };
 
