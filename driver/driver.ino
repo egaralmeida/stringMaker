@@ -5,6 +5,11 @@
 #error "Board has no Serial1 - select Tools > Board > Arduino Mega or Mega 2560"
 #endif
 
+// Uncomment for verbose serial diagnostics. Note: the debug prints can block
+// the step loop for >100ms at 9600 baud, pausing all motors - keep disabled
+// during production winding.
+//#define DEBUG
+
 // Pin assignments for each motor
 #define MOTOR_PIN_A_STEP 2
 #define MOTOR_PIN_A_DIR 5
@@ -70,8 +75,15 @@ const char END_CHAR = 'Q';   // End character for config command
 
 bool systemActive = false;    // True if system is running
 unsigned long lastReportTime = 0;    // Timer for reporting RPM counts every 500 ms
-unsigned long lastButtonPress = 0;   // Debounce timer for button
-bool lastButtonState = HIGH;  // Track previous button state for edge detection
+
+// Button glitch filter: the pin must hold a new state continuously for
+// BTN_STABLE_MS before it is accepted. A single noisy read (EMI coupled
+// into the button wiring from the stepper cables) can no longer stop the
+// system mid-run.
+const unsigned long BTN_STABLE_MS = 50;
+bool lastButtonReading = HIGH;       // Last raw pin reading
+unsigned long lastButtonChange = 0;  // When the raw reading last changed
+bool buttonPressHandled = false;     // True once a stable press has been acted on
 
 void setup() {
   Serial.begin(9600);      // Debugging over the main serial port
@@ -148,8 +160,10 @@ void handleIncomingData() {
 
     // Process when a complete 18-character command is received
     if (incomingData.length() == 18 && incomingData.charAt(0) == START_CHAR && incomingData.charAt(17) == END_CHAR) {
+#ifdef DEBUG
       Serial.print("Received raw data: ");
       Serial.println(incomingData);
+#endif
 
       // Parse and process the 18-character command
       processIncomingData(incomingData);
@@ -159,7 +173,9 @@ void handleIncomingData() {
     }
     // Clear buffer if command is malformed or incomplete
     else if (incomingData.length() >= 18) {
+#ifdef DEBUG
       Serial.println("Error: Incomplete or malformed command.");
+#endif
       incomingData = "";
     }
   }
@@ -203,7 +219,7 @@ void processIncomingData(String data) {
       delayMicroseconds(STEP_PULSE_WIDTH_US);
     }
 
-    // Debug
+#ifdef DEBUG
     Serial.print("Motor ");
     Serial.print(i + 1);
     Serial.print(" - Direction: ");
@@ -214,6 +230,7 @@ void processIncomingData(String data) {
     Serial.print(motors[i].interval);
     Serial.print("us, Active: ");
     Serial.println(motors[i].active ? "Yes" : "No");
+#endif
   }
 }
 
@@ -243,46 +260,57 @@ void doStep(Motor &motor, unsigned long currentTime) {
   }
 }
 
-// Handle start/stop button with edge detection (only trigger once per press)
+// Handle start/stop button with a stability (glitch) filter: the pin must
+// read LOW continuously for BTN_STABLE_MS before a press is accepted, and
+// must return to a stable HIGH before the next press can trigger.
 void handleButton() {
-  bool currentButtonState = digitalRead(BTN_PIN);
-  
-  // Only trigger on falling edge (HIGH -> LOW transition, i.e., button press)
-  if (currentButtonState == LOW && lastButtonState == HIGH) {
-    // Debounce - increased to 200ms to prevent erratic behavior
-    if (millis() - lastButtonPress > 200) {
-      lastButtonPress = millis();
-      
-      // Toggle system state
-      systemActive = !systemActive;
-      
-      // Update LED immediately with state change
-      digitalWrite(LED_PIN, systemActive ? HIGH : LOW);
-      
-      if (systemActive) {
-        // System starting - reset counters so each run counts turns from zero
-        for (int i = 0; i < 4; i++) {
-          motors[i].stepCountZ = 0;
-          motors[i].stepCountS = 0;
-        }
-        digitalWrite(MOTOR_PIN_B_ENABLED, LOW);  // Enable motors
-        digitalWrite(START_SIGNAL_PIN, LOW);     // Signal controller we're running
-        Serial.println("System STARTED - Motors enabled, waiting for config...");
-      } else {
-        // System stopping
-        digitalWrite(MOTOR_PIN_B_ENABLED, HIGH); // Disable motors
-        digitalWrite(START_SIGNAL_PIN, HIGH);    // Signal controller we're stopped
-        reportRPMCounts();                      // Send final counts
-        // Deactivate all motors
-        for (int i = 0; i < 4; i++) {
-          motors[i].active = false;
-        }
-        Serial.println("System STOPPED - Motors disabled");
-      }
+  bool reading = digitalRead(BTN_PIN);
+
+  // Raw reading changed: restart the stability timer
+  if (reading != lastButtonReading) {
+    lastButtonReading = reading;
+    lastButtonChange = millis();
+    return;
+  }
+
+  // Reading has been stable long enough to trust
+  if (millis() - lastButtonChange >= BTN_STABLE_MS) {
+    if (reading == LOW && !buttonPressHandled) {
+      buttonPressHandled = true;  // Act once per press
+      toggleSystem();
+    } else if (reading == HIGH) {
+      buttonPressHandled = false;  // Re-arm after a stable release
     }
   }
-  
-  lastButtonState = currentButtonState;  // Update state for next iteration
+}
+
+// Toggle between running and stopped states
+void toggleSystem() {
+  systemActive = !systemActive;
+
+  // Update LED immediately with state change
+  digitalWrite(LED_PIN, systemActive ? HIGH : LOW);
+
+  if (systemActive) {
+    // System starting - reset counters so each run counts turns from zero
+    for (int i = 0; i < 4; i++) {
+      motors[i].stepCountZ = 0;
+      motors[i].stepCountS = 0;
+    }
+    digitalWrite(MOTOR_PIN_B_ENABLED, LOW);  // Enable motors
+    digitalWrite(START_SIGNAL_PIN, LOW);     // Signal controller we're running
+    Serial.println("System STARTED - Motors enabled, waiting for config...");
+  } else {
+    // System stopping
+    digitalWrite(MOTOR_PIN_B_ENABLED, HIGH); // Disable motors
+    digitalWrite(START_SIGNAL_PIN, HIGH);    // Signal controller we're stopped
+    reportRPMCounts();                      // Send final counts
+    // Deactivate all motors
+    for (int i = 0; i < 4; i++) {
+      motors[i].active = false;
+    }
+    Serial.println("System STOPPED - Motors disabled");
+  }
 }
 
 // Report cumulative turn counts every 500ms when running and once before stopping.
