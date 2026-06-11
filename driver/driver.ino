@@ -1,3 +1,10 @@
+// This sketch needs a second hardware serial port to talk to the controller.
+// If this fires, the compile is not actually targeting a Mega 2560 - check
+// Tools > Board (and that no custom/old AVR core is shadowing the official one).
+#if !defined(HAVE_HWSERIAL1)
+#error "Board has no Serial1 - select Tools > Board > Arduino Mega or Mega 2560"
+#endif
+
 // Pin assignments for each motor
 #define MOTOR_PIN_A_STEP 2
 #define MOTOR_PIN_A_DIR 5
@@ -27,19 +34,19 @@ const unsigned long MIN_STEP_INTERVAL_US = 500;
 const unsigned int STEP_PULSE_WIDTH_US = 5;
 
 // Helper macros for direct port manipulation
-#define STEP_HIGH(m) (*((m).stepPort) |=  (1 << (m).stepBit))
-#define STEP_LOW(m)  (*((m).stepPort) &= ~(1 << (m).stepBit))
-#define DIR_HIGH(m)  (*((m).dirPort)  |=  (1 << (m).dirBit))
-#define DIR_LOW(m)   (*((m).dirPort)  &= ~(1 << (m).dirBit))
+#define STEP_HIGH(m) (*((m).stepPort) |=  (m).stepMask)
+#define STEP_LOW(m)  (*((m).stepPort) &= ~(m).stepMask)
+#define DIR_HIGH(m)  (*((m).dirPort)  |=  (m).dirMask)
+#define DIR_LOW(m)   (*((m).dirPort)  &= ~(m).dirMask)
 
 // Define structure to hold motor settings
 struct Motor {
   int stepPin;
   int dirPin;
   volatile uint8_t *stepPort;
-  uint8_t stepBit;
+  uint8_t stepMask;
   volatile uint8_t *dirPort;
-  uint8_t dirBit;
+  uint8_t dirMask;
   int rpm;                    // Speed in RPM
   bool dir;                   // true for clockwise (Z), false for counterclockwise (S)
   bool active;                // Motor active status
@@ -70,36 +77,18 @@ void setup() {
   Serial.begin(9600);      // Debugging over the main serial port
   Serial1.begin(9600);     // Use Serial1 for communication with the Arduino Uno (controller)
 
-  // Set up pins for each motor
+  // Set up pins for each motor and derive the port registers / bit masks
+  // for direct port manipulation from the pin numbers, so the mapping
+  // always matches the board the sketch is compiled for
   for (int i = 0; i < 4; i++) {
     pinMode(motors[i].stepPin, OUTPUT);
     pinMode(motors[i].dirPin, OUTPUT);
+
+    motors[i].stepPort = portOutputRegister(digitalPinToPort(motors[i].stepPin));
+    motors[i].stepMask = digitalPinToBitMask(motors[i].stepPin);
+    motors[i].dirPort  = portOutputRegister(digitalPinToPort(motors[i].dirPin));
+    motors[i].dirMask  = digitalPinToBitMask(motors[i].dirPin);
   }
-
-  // Initialize port pointers and bit masks for direct port manipulation
-  // Motor A: STEP=2 (PORTE, PE4), DIR=5 (PORTE, PE3)
-  motors[0].stepPort = &PORTE;
-  motors[0].stepBit = PE4;
-  motors[0].dirPort = &PORTE;
-  motors[0].dirBit = PE3;
-
-  // Motor B: STEP=3 (PORTE, PE5), DIR=6 (PORTH, PH3)
-  motors[1].stepPort = &PORTE;
-  motors[1].stepBit = PE5;
-  motors[1].dirPort = &PORTH;
-  motors[1].dirBit = PH3;
-
-  // Motor C: STEP=4 (PORTG, PG5), DIR=7 (PORTH, PH4)
-  motors[2].stepPort = &PORTG;
-  motors[2].stepBit = PG5;
-  motors[2].dirPort = &PORTH;
-  motors[2].dirBit = PH4;
-
-  // Motor D: STEP=12 (PORTB, PB6), DIR=13 (PORTB, PB7)
-  motors[3].stepPort = &PORTB;
-  motors[3].stepBit = PB6;
-  motors[3].dirPort = &PORTB;
-  motors[3].dirBit = PB7;
 
   // Set up shared enable pin, button, LED and start signal
   pinMode(MOTOR_PIN_B_ENABLED, OUTPUT);

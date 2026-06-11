@@ -37,7 +37,7 @@
 
 
 // Special Chars
-inline byte chrMotorRightA[] = {
+static byte chrMotorRightA[] = {
     0b11111,
     0b10000,
     0b10000,
@@ -47,7 +47,7 @@ inline byte chrMotorRightA[] = {
     0b11111,
     0b00000};
 
-inline byte chrMotorRightB[] = {
+static byte chrMotorRightB[] = {
     0b11000,
     0b11000,
     0b11000,
@@ -57,7 +57,7 @@ inline byte chrMotorRightB[] = {
     0b11000,
     0b00000};
 
-inline byte chrCircleFilledA[] = {
+static byte chrCircleFilledA[] = {
     0b00111,
     0b01100,
     0b11001,
@@ -67,7 +67,7 @@ inline byte chrCircleFilledA[] = {
     0b00111,
     0b00000};
 
-inline byte chrCircleFilledB[] = {
+static byte chrCircleFilledB[] = {
     0b11000,
     0b00100,
     0b10010,
@@ -77,7 +77,7 @@ inline byte chrCircleFilledB[] = {
     0b11000,
     0b00000};
 
-inline byte chrMotorLeftA[] = {
+static byte chrMotorLeftA[] = {
     0b00011,
     0b00011,
     0b00011,
@@ -87,7 +87,7 @@ inline byte chrMotorLeftA[] = {
     0b00011,
     0b00000};
 
-inline byte chrMotorLeftB[] = {
+static byte chrMotorLeftB[] = {
     0b11111,
     0b00001,
     0b00001,
@@ -97,7 +97,7 @@ inline byte chrMotorLeftB[] = {
     0b11111,
     0b00000};
 
-inline byte chrCircleA[] = {
+static byte chrCircleA[] = {
     0b00011,
     0b00110,
     0b01100,
@@ -107,7 +107,7 @@ inline byte chrCircleA[] = {
     0b00011,
     0b00000};
 
-inline byte chrCircleB[] = {
+static byte chrCircleB[] = {
     0b11000,
     0b01100,
     0b00110,
