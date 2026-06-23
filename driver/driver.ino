@@ -38,6 +38,17 @@ const int STEPS_PER_REV = 200;
 const unsigned long MIN_STEP_INTERVAL_US = 500;
 const unsigned int STEP_PULSE_WIDTH_US = 5;
 
+// Output-shaft steps per revolution for each motor (A, B, C, D), accounting
+// for gearing. Motor B drives its output through a 1:3 gearbox, so the motor
+// itself must turn 3 motor-revolutions for every 1 output-shaft revolution -
+// commanded/displayed RPM and turn counts are all in output-shaft terms.
+const unsigned long STEPS_PER_OUTPUT_REV[4] = {
+  STEPS_PER_REV,      // A: 1:1
+  STEPS_PER_REV * 3,  // B: 1:3
+  STEPS_PER_REV,      // C: 1:1
+  STEPS_PER_REV       // D: 1:1
+};
+
 // Helper macros for direct port manipulation
 #define STEP_HIGH(m) (*((m).stepPort) |=  (m).stepMask)
 #define STEP_LOW(m)  (*((m).stepPort) &= ~(m).stepMask)
@@ -63,15 +74,21 @@ struct Motor {
 
 // Create motor instances (port pointers initialized in setup())
 Motor motors[4] = {
-  {MOTOR_PIN_A_STEP, MOTOR_PIN_A_DIR, nullptr, 0, nullptr, 0, 400, true, false, 0, 750, 0, 0},
-  {MOTOR_PIN_B_STEP, MOTOR_PIN_B_DIR, nullptr, 0, nullptr, 0, 400, true, false, 0, 750, 0, 0},
-  {MOTOR_PIN_C_STEP, MOTOR_PIN_C_DIR, nullptr, 0, nullptr, 0, 400, true, false, 0, 750, 0, 0},
-  {MOTOR_PIN_D_STEP, MOTOR_PIN_D_DIR, nullptr, 0, nullptr, 0, 400, true, false, 0, 750, 0, 0}
+  {MOTOR_PIN_A_STEP, MOTOR_PIN_A_DIR, nullptr, 0, nullptr, 0, 50, true, false, 0, 6000, 0, 0},
+  {MOTOR_PIN_B_STEP, MOTOR_PIN_B_DIR, nullptr, 0, nullptr, 0, 50, true, false, 0, 2000, 0, 0},
+  {MOTOR_PIN_C_STEP, MOTOR_PIN_C_DIR, nullptr, 0, nullptr, 0, 50, true, false, 0, 6000, 0, 0},
+  {MOTOR_PIN_D_STEP, MOTOR_PIN_D_DIR, nullptr, 0, nullptr, 0, 50, true, false, 0, 6000, 0, 0}
 };
 
-String incomingData = ""; // Buffer for incoming serial data
 const char START_CHAR = 'M'; // Start character for config command
 const char END_CHAR = 'Q';   // End character for config command
+const int CMD_LENGTH = 18;   // Full M...Q command length
+
+// Fixed-size receive buffer - avoids String's per-character heap reallocation,
+// which was stalling the step loop (and the periodic RPM report below) long
+// enough to cause an audible micro-halt across all motors
+char incomingData[CMD_LENGTH];
+int incomingLength = 0;
 
 bool systemActive = false;    // True if system is running
 unsigned long lastReportTime = 0;    // Timer for reporting RPM counts every 500 ms
@@ -83,7 +100,10 @@ unsigned long lastReportTime = 0;    // Timer for reporting RPM counts every 500
 const unsigned long BTN_STABLE_MS = 50;
 bool lastButtonReading = HIGH;       // Last raw pin reading
 unsigned long lastButtonChange = 0;  // When the raw reading last changed
-bool buttonPressHandled = false;     // True once a stable press has been acted on
+// Starts true so a button already reading LOW at boot (e.g. a maintained
+// switch left closed from the last session) cannot auto-start the system -
+// a genuine release (stable HIGH) is required before any press can register
+bool buttonPressHandled = true;
 
 void setup() {
   Serial.begin(9600);      // Debugging over the main serial port
@@ -152,41 +172,47 @@ void handleIncomingData() {
     }
     
     // If buffer is empty, only accept 'M' as start (sync to command start)
-    if (incomingData.length() == 0 && incomingChar != START_CHAR) {
+    if (incomingLength == 0 && incomingChar != START_CHAR) {
       continue;  // Skip garbage until we find 'M'
     }
-    
-    incomingData += incomingChar;  // Accumulate valid characters
+
+    incomingData[incomingLength++] = incomingChar;  // Accumulate valid characters
 
     // Process when a complete 18-character command is received
-    if (incomingData.length() == 18 && incomingData.charAt(0) == START_CHAR && incomingData.charAt(17) == END_CHAR) {
+    if (incomingLength == CMD_LENGTH && incomingData[0] == START_CHAR && incomingData[CMD_LENGTH - 1] == END_CHAR) {
 #ifdef DEBUG
       Serial.print("Received raw data: ");
-      Serial.println(incomingData);
+      Serial.write(incomingData, CMD_LENGTH);
+      Serial.println();
 #endif
 
       // Parse and process the 18-character command
       processIncomingData(incomingData);
 
       // Clear incomingData
-      incomingData = "";
+      incomingLength = 0;
     }
     // Clear buffer if command is malformed or incomplete
-    else if (incomingData.length() >= 18) {
+    else if (incomingLength >= CMD_LENGTH) {
 #ifdef DEBUG
       Serial.println("Error: Incomplete or malformed command.");
 #endif
-      incomingData = "";
+      incomingLength = 0;
     }
   }
 }
 
+// Parses exactly 3 ASCII digit characters (the protocol's zero-padded RPM field)
+int parseRpm3(const char *digits) {
+  return (digits[0] - '0') * 100 + (digits[1] - '0') * 10 + (digits[2] - '0');
+}
+
 // Parse and process M...Q command for each motor
-void processIncomingData(String data) {
+void processIncomingData(const char *data) {
   for (int i = 0; i < 4; i++) {
-    int index = 1 + (i * 4); 
-    char direction = data.charAt(index); // Direction (S, Z, or X)
-    int rpm = data.substring(index + 1, index + 4).toInt();
+    int index = 1 + (i * 4);
+    char direction = data[index]; // Direction (S, Z, or X)
+    int rpm = parseRpm3(&data[index + 1]);
 
     if (direction == 'X' || rpm <= 0) {
       // 'X' or 0 RPM both mean "do not move" (also guards the interval division below)
@@ -196,8 +222,9 @@ void processIncomingData(String data) {
       motors[i].rpm = rpm;
       motors[i].dir = (direction == 'Z'); // 'Z' for CW (true), 'S' for CCW (false)
 
-      // Calculate step interval; force 32-bit math (200 * rpm overflows 16-bit int above 163 RPM)
-      motors[i].interval = 60000000UL / ((unsigned long)STEPS_PER_REV * (unsigned long)rpm);
+      // Calculate step interval from the desired output-shaft RPM; force 32-bit
+      // math (200 * rpm overflows 16-bit int above 163 RPM)
+      motors[i].interval = 60000000UL / (STEPS_PER_OUTPUT_REV[i] * (unsigned long)rpm);
 
       // Clamp to minimum step interval
       if (motors[i].interval < MIN_STEP_INTERVAL_US) {
@@ -317,23 +344,28 @@ void toggleSystem() {
 // Counts accumulate for the whole run (reset on system start), so the controller
 // always displays the total number of turns wound so far.
 void reportRPMCounts() {
-  String report = "R"; // Start with R
-  char buffer[6];
+  // "R" + 4 motors * (5 Z digits + 5 S digits) + "Q" + '\0'
+  char report[44];
+  report[0] = 'R';
+  int pos = 1;
 
   for (int i = 0; i < 4; i++) {
-    // Z direction: convert steps to whole turns, keep within 5 digits
-    sprintf(buffer, "%05lu", (motors[i].stepCountZ / STEPS_PER_REV) % 100000UL);
-    report += buffer;
+    // Z direction: convert raw motor steps to whole output-shaft turns, keep within 5 digits
+    sprintf(&report[pos], "%05lu", (motors[i].stepCountZ / STEPS_PER_OUTPUT_REV[i]) % 100000UL);
+    pos += 5;
 
     // S direction
-    sprintf(buffer, "%05lu", (motors[i].stepCountS / STEPS_PER_REV) % 100000UL);
-    report += buffer;
+    sprintf(&report[pos], "%05lu", (motors[i].stepCountS / STEPS_PER_OUTPUT_REV[i]) % 100000UL);
+    pos += 5;
   }
 
-  report += "Q"; // End with Q
+  report[pos++] = 'Q'; // End with Q
+  report[pos] = '\0';
+
   Serial1.println(report); // Send to controller
 
 #ifdef DEBUG
-  Serial.println("Sent RPM report: " + report);
+  Serial.print("Sent RPM report: ");
+  Serial.println(report);
 #endif
 }

@@ -169,10 +169,10 @@ void sendMotorConfiguration() {
 
 // Initialize axis settings for each motor
 void initializeAxis() {
-  rowAxis[ROW_A] = { '0', '1', '2', 20, 0, 0, 'S' };
-  rowAxis[ROW_B] = { '4', '5', '6', 20, 0, 0, 'S' };
-  rowAxis[ROW_C] = { '8', '9', 'A', 20, 0, 0, 'Z' };
-  rowAxis[ROW_D] = { 'C', 'D', 'E', 20, 0, 0, 'X' };
+  rowAxis[ROW_A] = { '0', '1', '2', 50, 0, 0, 'S' };
+  rowAxis[ROW_B] = { '4', '5', '6', 50, 0, 0, 'S' };
+  rowAxis[ROW_C] = { '8', '9', 'A', 50, 0, 0, 'Z' };
+  rowAxis[ROW_D] = { 'C', 'D', 'E', 50, 0, 0, 'X' };
 
   specialButtonKeys[0] = '3';
   specialButtonKeys[1] = 'F';
